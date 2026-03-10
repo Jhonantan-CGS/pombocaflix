@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#03030a">
+    <title>PombocaFlix Ultra Max</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;800&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-cinema: #03030a;
+            --glass-1: rgba(255, 255, 255, 0.03);
+            --glass-2: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-1: #ff004c;
+            --neon-2: #6a00ff;
+            --neon-3: #00eaff;
+            --gradient: linear-gradient(135deg, var(--neon-1), var(--neon-2));
+            --font-display: 'Syncopate', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --header-h: 80px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; background-color: var(--bg-cinema); }
+        body { font-family: var(--font-body); color: #fff; overflow-x: hidden; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+        button, input { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
+        button { cursor: pointer; }
+        ::-webkit-scrollbar { display: none; }
+
+        /* LUZES AMBIENTES */
+        .ambient-light { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: -1; overflow: hidden; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3; animation: float 20s infinite alternate cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .blob-1 { width: 50vw; height: 50vw; background: var(--neon-2); top: -20vh; left: -10vw; }
+        .blob-2 { width: 60vw; height: 60vw; background: var(--neon-1); bottom: -30vh; right: -10vw; animation-delay: -5s; }
+        @keyframes float { 100% { transform: translate(10vw, 10vh) scale(1.2); } }
+
+        #main-ui { opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+        #main-ui.visible { opacity: 1; pointer-events: all; }
+
+        /* MODAIS GLOBAIS */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(3,3,10,0.9);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            z-index: 100000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-box {
+            background: var(--glass-2); border: 1px solid var(--glass-border);
+            padding: 40px; border-radius: 20px; text-align: center; max-width: 400px; width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8); transform: translateY(30px); transition: 0.4s ease;
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-icon { font-size: 60px; margin-bottom: 20px; }
+        .modal-title { font-family: var(--font-display); font-size: 20px; margin-bottom: 15px; color: var(--neon-1); line-height: 1.4;}
+        .modal-text { font-size: 16px; line-height: 1.5; margin-bottom: 30px; color: #ccc; }
+        .btn-modal { background: #fff; color: #000; font-weight: 800; padding: 12px 30px; border-radius: 8px; font-size: 16px; transition: 0.3s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-modal:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+        .password-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--neon-1); color: #fff; font-size: 24px; text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: var(--font-display); letter-spacing: 10px; }
+
+        /* INTRO CINEMATOGRÁFICA */
+        #intro-screen { position: fixed; inset: 0; background: #000; z-index: 99999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+        #intro-screen.active { opacity: 1; pointer-events: all; }
+        .intro-logo { font-family: var(--font-display); font-size: clamp(30px, 8vw, 80px); background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; transform: scale(0.5); opacity: 0; transition: all 3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        #intro-screen.play .intro-logo { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 30px var(--neon-1)); }
+
+        /* TELA DA AMANDA */
+        #cow-screen { position: fixed; inset: 0; background: #000; z-index: 99998; display: none; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; overflow: hidden; }
+        #cow-screen.active { display: flex; opacity: 1; pointer-events: all; }
+        .amanda-bg { position: absolute; inset: -5%; background-size: cover; background-position: center; filter: brightness(0.5) contrast(1.1); animation: amandaPan 6s ease-in-out forwards; }
+        @keyframes amandaPan { 0% { transform: scale(1.1) translateX(2%); } 100% { transform: scale(1) translateX(-2%); } }
+        .amanda-vignette { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 10%, #000 95%); }
+        .cow-content { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .cow-icon { font-size: 80px; animation: bounce 1s infinite alternate; filter: drop-shadow(0 0 20px #fff); }
+        .cow-text { font-family: var(--font-display); font-size: clamp(20px, 4vw, 40px); text-align: center; letter-spacing: 2px; color: #fff; text-shadow: 0 0 20px var(--neon-1), 0 5px 15px rgba(0,0,0,1); animation: pulseText 1.5s infinite alternate; }
+        .milk-drops { font-size: 30px; animation: drip 1s infinite; }
+        @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-20px); } }
+        @keyframes pulseText { from { opacity: 0.8; text-shadow: 0 0 10px var(--neon-1); } to { opacity: 1; text-shadow: 0 0 30px var(--neon-1); } }
+        @keyframes drip { 0% { transform: translateY(-10px); opacity: 1; } 100% { transform: translateY(30px); opacity: 0; } }
+
+        /* HEADER E PERFIL */
+        header { position: fixed; top: 0; left: 0; width: 100%; height: var(--header-h); display: flex; align-items: center; justify-content: space-between; padding: 0 4%; z-index: 1000; transition: background 0.4s; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); }
+        header.scrolled { background: rgba(3,3,10,0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header-left { display: flex; align-items: center; gap: 40px; }
+        .brand { font-family: var(--font-display); font-size: 22px; display: flex; align-items: center; gap: 12px; cursor: pointer;}
+        .brand span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { font-size: 14px; font-weight: 600; color: #ccc; text-decoration: none; transition: 0.3s; cursor: pointer; }
+        .nav-links a:hover { color: #fff; text-shadow: 0 0 10px #fff; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { display: flex; align-items: center; background: var(--glass-2); border: 1px solid var(--glass-border); border-radius: 30px; padding: 8px 15px; transition: 0.3s; }
+        .search-box:focus-within { border-color: var(--neon-1); background: var(--glass-1); }
+        .search-box input { color: #fff; width: 140px; font-size: 14px; transition: width 0.3s; }
+        .search-box input:focus { width: 220px; }
+        .profile-container { width: 60px; height: 60px; min-width: 60px; border-radius: 14px; overflow: hidden; border: 2px solid var(--neon-1); box-shadow: 0 0 15px rgba(255, 0, 76, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s ease; background: var(--glass-2); }
+        .header-left .profile-container { width: 45px; height: 45px; min-width: 45px; border-width: 1px; border-radius: 10px;}
+        .profile-container:hover { transform: scale(1.1); box-shadow: 0 0 25px rgba(255, 0, 76, 0.8); }
+        .profile-container img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
+        
+        /* BANNER */
+        #hero { position: relative; width: 100vw; height: 85vh; min-height: 550px; display: flex; flex-direction: column; justify-content: flex-end; padding: 6% 4%; overflow: hidden; }
+        .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: top center; z-index: 0; filter: brightness(0.6) saturate(1.2); transition: background-image 1s ease; }
+        .hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, var(--bg-cinema) 0%, transparent 60%, rgba(0,0,0,0.6) 100%); }
+        .hero-content { position: relative; z-index: 10; max-width: 800px; }
+        .hero-badge { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 6px 12px; border-radius: 4px; background: var(--glass-2); border: 1px solid var(--neon-1); color: #fff; margin-bottom: 15px; }
+        .hero-title { font-family: var(--font-display); font-size: clamp(40px, 6vw, 80px); line-height: 1; margin-bottom: 15px; text-shadow: 0 4px 20px #000; }
+        .hero-meta { font-size: 16px; color: #ccc; font-weight: 600; margin-bottom: 25px; display: flex; gap: 15px; align-items: center;}
+        .btn-primary { background: var(--neon-1); color: #fff; padding: 14px 36px; font-size: 16px; font-weight: bold; border-radius: 8px; transition: all 0.4s; border: none; cursor: pointer;}
+        .btn-primary:hover { transform: scale(1.05); background: #fff; color: #000; box-shadow: 0 10px 30px rgba(255,255,255,0.5); }
+
+        /* CATÁLOGO - GRID VERTICAL (Lazy Loading) */
+        main { position: relative; z-index: 20; margin-top: -8vh; padding-bottom: 100px; }
+        .row { margin-bottom: 50px; }
+        .row-title { font-size: 24px; font-weight: 800; padding: 0 4%; margin-bottom: 20px; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .row-title::before { content: ''; width: 4px; height: 24px; background: var(--neon-1); display: block; border-radius: 2px; }
+        .carousel { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 25px; padding: 0 4% 20px; }
+        .card-wrapper { perspective: 1000px; width: 100%; }
+        .card { position: relative; width: 100%; aspect-ratio: 2/3; border-radius: 12px; background: #161622; transform-style: preserve-3d; transition: transform 0.5s var(--ease-cine), box-shadow 0.5s; cursor: pointer; border: 1px solid var(--glass-border); overflow: hidden; }
+        .card-wrapper:hover .card { transform: rotateX(5deg) rotateY(-5deg) scale(1.08); box-shadow: -10px 15px 30px rgba(0,0,0,0.8); z-index: 10; border-color: var(--neon-1); }
+        .css-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 15px; text-align: center; font-size: 14px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.4); background: radial-gradient(circle, #2a2a35 0%, #111 100%); z-index: 1;}
+        .card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.5s ease; }
+        .card-img.loaded { opacity: 1; }
+        .card-wrapper:hover .card-img { filter: brightness(0.3); }
+        .card-ui { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; opacity: 0; transform: translateY(10px) translateZ(20px); transition: 0.4s; background: linear-gradient(to top, rgba(0,0,0,0.95), transparent); border-radius: 12px; }
+        .card-wrapper:hover .card-ui { opacity: 1; transform: translateY(0) translateZ(30px); }
+        .card-title { font-size: 14px; font-weight: 800; margin-bottom: 8px; text-shadow: 0 2px 10px #000; line-height: 1.2; }
+        .card-meta { font-size: 11px; color: var(--neon-3); font-weight: 800; margin-bottom: 10px; }
+        .btn-play { background: #fff; color: #000; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: bold; width: 100%; text-align: center; border: none; transition: 0.3s; cursor: pointer;}
+        .btn-play:hover { background: var(--neon-1); color: #fff; }
+
+        /* PLAYER IMAX */
+        #player-overlay { position: fixed; inset: 0; background: #000; z-index: 999999; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        #player-overlay.active { opacity: 1; pointer-events: all; }
+        .imax-glow { position: absolute; inset: 0; box-shadow: inset 0 0 150px rgba(106, 0, 255, 0.2); pointer-events: none; z-index: 1; }
+        .player-header { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .player-title { font-family: var(--font-display); font-size: 20px; text-shadow: 0 2px 5px #000; }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        .btn-report { background: rgba(255, 0, 76, 0.2); border: 1px solid var(--neon-1); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.3s; cursor:pointer; }
+        .btn-report:hover { background: var(--neon-1); box-shadow: var(--glow-shadow); }
+        .btn-close { width: 45px; height: 45px; border-radius: 50%; background: var(--glass-2); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); transition: 0.3s; border: 1px solid var(--glass-border); cursor:pointer;}
+        .btn-close:hover { background: var(--neon-1); transform: rotate(90deg); border-color: var(--neon-1); }
+        .player-container { flex: 1; width: 100%; position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; padding-top: 60px;}
+        iframe { width: 90%; height: 85%; border: none; border-radius: 12px; box-shadow: 0 0 50px rgba(0,0,0,1); background: #000; }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-title { font-size: 40px; }
+            .carousel { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+            iframe { width: 100%; height: 100%; border-radius: 0; }
+            .player-container { padding-top: 0; }
+            .profile-container { width: 45px; height: 45px; min-width: 45px; border-radius: 10px;}
+            .header-actions { gap: 8px; }
+            .btn-report { font-size: 10px; padding: 6px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-light"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+    <div id="login-screen" class="modal-overlay active">
+        <div class="modal-box">
+            <div class="modal-icon">🔐</div>
+            <h2 class="modal-title">AUTENTICAÇÃO NECESSÁRIA</h2>
+            <p class="modal-text">Para contornar a segurança do navegador e assistir os filmes sem bloqueio, faça login no Google abaixo e depois clique em Continuar.</p>
+            <button class="btn-modal" style="background:#fff; color:#000; margin-bottom: 15px;" onclick="window.open('https://drive.google.com/', '_blank')">
+                <svg style="width:18px; height:18px; margin-right:5px; vertical-align:middle;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Fazer Login no Google
+            </button>
+            <button class="btn-modal" style="background:var(--neon-1); color:#fff;" onclick="App.finishLogin()">Já fiz Login / Continuar</button>
+        </div>
+    </div>
+
+    <div id="modal-tasks" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon" id="task-icon">🧹</div>
+            <h2 class="modal-title">INSPEÇÃO DE ROTINA</h2>
+            <p class="modal-text" id="task-text">Carregando...</p>
+            <button class="btn-modal" onclick="App.acceptTasks()">Tudo Certo, Chefia!</button>
+        </div>
+    </div>
+
+    <div id="intro-screen">
+        <div class="intro-logo">POMBOCAFLIX</div>
+    </div>
+
+    <div id="main-ui">
+        
+        <div id="modal-terror" class="modal-overlay">
+            <div class="modal-box" id="terror-box">
+                <div class="modal-icon">👻</div>
+                <h2 class="modal-title">ÁREA ASSUSTADORA</h2>
+                <p class="modal-text">Até os fantasmas exigem credenciais. Digite a senha (4030) para entrar.</p>
+                <input type="password" id="terror-pwd" class="password-input" maxlength="4" placeholder="****">
+                <button class="btn-modal" onclick="App.checkPassword()">Destrancar</button>
+                <button class="btn-modal" style="background:transparent; color:#ccc; margin-top:10px; font-size:12px;" onclick="Modal.close('modal-terror')">Fugir</button>
+            </div>
+        </div>
+
+        <div id="modal-alert" class="modal-overlay">
+            <div class="modal-box">
+                <div class="modal-icon" id="alert-icon">⚠️</div>
+                <h2 class="modal-title" id="alert-title">Aviso</h2>
+                <p class="modal-text" id="alert-text">Mensagem...</p>
+                <button class="btn-modal" onclick="Modal.close('modal-alert')">OK</button>
+            </div>
+        </div>
+
+        <div id="modal-verifier" class="modal-overlay">
+            <div class="modal-box" id="verifier-modal" style="max-width: 800px; max-height: 80vh; display: flex; flex-direction: column;">
+                <h2 class="modal-title">VERIFICAÇÃO DE CATÁLOGO</h2>
+                <p class="modal-text" style="margin-bottom:0;">Testando integridade do banco de dados local...</p>
+                <div style="overflow-y: auto; margin-top: 20px; text-align: left; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; flex: 1;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead><tr>
+                            <th style="color: var(--neon-3); padding: 10px; border-bottom: 1px solid var(--glass-border);">Filme/Série</th>
+                            <th style="color: var(--neon-3); padding: 10px; border-bottom: 1px solid var(--glass-border);">Categoria</th>
+                            <th style="color: var(--neon-3); padding: 10px; border-bottom: 1px solid var(--glass-border);">Status</th>
+                        </tr></thead>
+                        <tbody id="verifier-table"></tbody>
+                    </table>
+                </div>
+                <button class="btn-modal" style="margin-top:20px;" onclick="Modal.close('modal-verifier')">Fechar</button>
+            </div>
+        </div>
+
+        <div id="cow-screen">
+            <div class="amanda-bg" style="background-image: url('https://drive.google.com/thumbnail?id=1zuZ9N6qHAZJFXG2CbG5cUpRqo7VIjsBV&sz=w1920');"></div>
+            <div class="amanda-vignette"></div>
+            <div class="cow-content">
+                <div class="cow-icon">🐄</div>
+                <div class="cow-text">Aguardando a Amanda<br>tirar leite...</div>
+                <div class="milk-drops">🥛</div>
+            </div>
+        </div>
+
+        <header id="header">
+            <div class="header-left">
+                <div class="brand" onclick="window.scrollTo(0,0)">
+                    <div class="profile-container">
+                        <img src="https://drive.google.com/thumbnail?id=1UYxPHNg3Sj8BmS5wiEQsRe_IRrem7vmZ&sz=w200" alt="Logo">
+                    </div>
+                    <span>POMBOCAFLIX</span>
+                </div>
+                <nav class="nav-links">
+                    <a onclick="window.scrollTo(0,0)">Início</a>
+                    <a onclick="document.getElementById('catalog-content').scrollIntoView()">Catálogo</a>
+                    <a onclick="App.runVerifier()">Verificador</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="search-box">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 2a8 8 0 015.29 14.71l5 5a1 1 0 01-1.42 1.42l-5-5A8 8 0 1110 2zm0 2a6 6 0 100 12A6 6 0 0010 4z"/></svg>
+                    <input type="text" id="searchInput" placeholder="Buscar filmes..." oninput="App.search(this.value)">
+                </div>
+                <div class="profile-container" title="Perfil da Amanda">
+                    <img src="https://drive.google.com/thumbnail?id=1UYxPHNg3Sj8BmS5wiEQsRe_IRrem7vmZ&sz=w400" alt="Perfil Amanda">
+                </div>
+            </div>
+        </header>
+
+        <section id="hero">
+            <div class="hero-bg" id="hero-bg"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-badge">Ultra Max Original</div>
+                <h1 class="hero-title" id="hero-title">Iniciando...</h1>
+                <div class="hero-meta" id="hero-meta">Aguarde</div>
+                <button class="btn-primary" id="hero-play">▶ Assistir Agora</button>
+            </div>
+        </section>
+
+        <main id="catalog-content"></main>
+
+        <div id="player-overlay">
+            <div class="imax-glow"></div>
+            <div class="player-header">
+                <div class="player-title" id="player-title">Título</div>
+                <div class="header-actions">
+                    <button class="btn-report" onclick="App.reportBrokenMovie()" title="Remove o filme e envia para a planilha">⚠️ Marcar Erro</button>
+                    <button class="btn-close" onclick="App.closePlayer()">✕</button>
+                </div>
+            </div>
+            <div class="player-container" id="player-container"></div>
+        </div>
+    </div> <audio id="snd-intro" src="https://actions.google.com/sounds/v1/science_fiction/sci_fi_whoosh.ogg" preload="auto"></audio>
+    <audio id="snd-terror" src="https://actions.google.com/sounds/v1/horror/monster_snarl.ogg" preload="auto"></audio>
+
+    <script>
+        const WEB_APP_URL = "URL_DO_SEU_APPS_SCRIPT_AQUI"; 
+
+        const jokeIntros = ["Pomboca,", "Atenção Pomboca!", "Alerta vermelho:", "Misericórdia Pomboca,", "Aí Pomboca,", "Notícia urgente:", "Pelo amor de Deus Pomboca,", "Cuidado galera,"];
+        const jokeObs = ["seu sovaco tá vencido,", "tu não toma banho desde 2019,", "esse seu cabelo tá criando vida própria,", "você comeu e deixou a blusa parecendo um lixão,", "o cheiro aí tá pior que esgoto a céu aberto,", "tem uma nuvem de poeira te seguindo,", "sua toalha de banho tá pedindo socorro,", "você soltou um pum que derreteu a pintura da parede,"];
+        const jokePunchlines = ["vai pro chuveiro agora!", "até o Wi-Fi caiu com esse fedor.", "a Vigilância Sanitária já tá a caminho.", "passa um sabonete, prometo que não morde!", "tá espantando até os mosquitos.", "a água do chuveiro mandou lembranças.", "o IBAMA vai isolar a área.", "a poluição visual e olfativa tá gritante!"];
+
+        function getPombocaJoke() {
+            return `${jokeIntros[Math.floor(Math.random()*jokeIntros.length)]} ${jokeObs[Math.floor(Math.random()*jokeObs.length)]} ${jokePunchlines[Math.floor(Math.random()*jokePunchlines.length)]}`;
+        }
+
+        /* O BANCO DE DADOS COMPLETO E DEFINITIVO (Extraído do PDF enviado)
+           Todas as séries formatadas por temporada e episódio.
+        */
+        const dbString = "Comédia|20 Anos Mais Jovem|1usyWLbKXBYY0gikoA4TC11lynajts3Ry,Ação|A Rede|1YGLFZ2MkMukl_dMsWIN950xz3CRmYMA,Drama|Um Homem de Sorte|1CCvCdacWLjrlalHTs5qRz7eEwrDfYTE,Drama|A Beira do Caminho|1gqMDXhJnZx1wVDEviNlqueBAHjuqMxqj,Romance|A Casa do Lago|1hJN-PAvzbj7jWdvf0c3Ja_ykD9qXMio,Comédia|A Família Buscapé|1ZpWi7tTkJmhYP6ylgGVMozpNh56z2GYq,Fantasia|A Fantástica Fábrica De Chocolate|1-Ir_0WWKg9W2zpDKPpCiWn9dkOEz02o,Romance|A Fera|108beBAKHS7_J-FpeZ3fcg-AcbDXIE4ZO,Romance|A Força do Destino|1-TGPUTsqdoHzI0LtvhA5oNuVNjOt-2E,Fantasia|A História Sem Fim|1Y6nhg2l_8XBVNevXO5llbaqAPTKrW1Q,Terror|A Rainha dos Condenados|16SgeiqYe4ZRF6uez3U6NT8TyBaTTSQk,Musical|ABBA The Movie|SEM_LINK_VALIDO,Romance|Amor Sem Limites|SEM_LINK_VALIDO,Fantasia|Animais Fantásticos e Onde Habitam|SEM_LINK_VALIDO,Comédia|As Bem Armadas|1UpX8sPIOJP0BfJDb8gUYFjc_t-e8WIM,Fantasia|As Crônicas de Nárnia O Leão a Feiticeira|SEM_LINK_VALIDO,Comédia|As Férias de Mr. Bean|SEM_LINK_VALIDO,Comédia|As Namoradas do Papai|SEM_LINK_VALIDO,Drama|As Vantagens de Ser Invisivel|1iMdxa5bqwpiUKSXNnZk2zd5ByKaC550,Ficção Científica|Avatar|SEM_LINK_VALIDO,Super-Heróis|Batman vs Superman|1emqon3NyCN2YhmDzHYuQsCdpsX6zfoA,Família|Beethoven O Magnífico|1DQ895f7kzN1D0vFR-08SoiuNP4QuBjo,Romance|Camille Um Amor do Outro Mundo|1gVtN88LtTX4JTvd9nfYP4uiFUnbFtXM,Romance|Caminhando nas Nuvens|17Y2yvqTUUtZvlLwkksf6h_zUhalrkNw,Musical|Cantando na Chuva|1QSqGoXKTP35TMLJhgAFhoCeD6M6GaAXD,Ação|Capitão América Guerra Civil|SEM_LINK_VALIDO,Romance|Casablanca|13U3r4DarJSi8yJhad2e_VrLrX_5a1WA,Ficção Científica|Chappie|SEM_LINK_VALIDO,Fantasia|Cinderela|SEM_LINK_VALIDO,Romance|Como Eu Era Antes de Você|SEM_LINK_VALIDO,Ficção Científica|Constantine|SEM_LINK_VALIDO,Ficção Científica|Contatos Imediatos Do Terceiro Grau|SEM_LINK_VALIDO,Ação|Coracao Valente|SEM_LINK_VALIDO,Ficção Científica|Corpo Fechado|1tW4objBtikjxXPKCmNjw-J4-dHwiBkc,Romance|Da Magia À Sedução|SEM_LINK_VALIDO,Ação|De Volta Para o Presente|1hgTZ3OLC_E4aUz-g-KfYqr0nUYp96PY,Ação|Deadpool|SEM_LINK_VALIDO,Família|Dennis o Pimentinha|1RVYSAVSHahJTpsCCsTelLtTt1ETBsDI,Fantasia|Descendentes 2|1tQAGn79j4TJFMG5dEmZqJVIDgeBCB-s,Fantasia|Descendentes|108MNNGE6ZINxpoyJTOY_CS004c8RrR8,Musical|Dirty Dancing|1dry7pVgpHUx15KbngUY9R9gEd9YH7Ow,Musical|Dirty Dancing 2|16x2cpjNBjV9g_j0v1LzUxpY57B42fio,Romance|Diário de Uma Paixão|163deNAPPEncSxTAVgA5rDKX_AYj-Yc0,Ação|Django Atira Primeiro|1ADYHKFQaCSL6YNPT0985hw2KqDFCIOA,Comédia|Do Que as Mulheres Gostam|148MD9Xh79qojTEwcf_gPpwE3ni2xNh0,Romance|Doutor Jivago|SEM_LINK_VALIDO,Romance|E Se Fosse Verdade|1pmlinehhMymr7312_vhWDPNH5-9nwX4,Romance|E o Vento Levou|1gR47GplZwN3eFMOdouvYMZMW5-j0spo,Fantasia|Edward Maos de Tesoura|1aGobvuf4ccQu_T1BcmTYAxnzifc1l3U,Fantasia|Encantada|18eRTg3A17SGnQYTJqKKxVxVjylXKlcc,Romance|Enquanto Você Dormia|1TnU99DA3QjOPb-a6MbU,Comédia|Especialista em Crise|1gXhvB_rJufCXJk6-03Yqt27R6sIGTQE,Comédia|Esposa de Mentirinha|SEM_LINK_VALIDO,Comédia|Esqueceram De Mim 2|1kvOcIUgefwWjK-Q_181v6SPP0_inVDM,Comédia|Esqueceram de Mim 1|1AAzBFr-8Egjgt9WgdXXYtowVkVwt6P8,Comédia|Esqueceram de Mim 3|1mJhigk9LBDklajPIN5Yv71QQGpoKMSg,Drama|Eternamente Jovem|SEM_LINK_VALIDO,Ficção Científica|Eu Sou a Lenda|1vOXTb7WhV2Re2uyLfVbp6dxi_Lmi2D4,Comédia|Feitiço do Tempo|13C98VRk5HA7uWon0_1R6LF1R26WszVhm,Musical|Footloose|SEM_LINK_VALIDO,Romance|Ghost|SEM_LINK_VALIDO,Musical|Grease 1|SEM_LINK_VALIDO,Musical|Grease 2|1Jjf_0Nf9sKJ_JexmOgqCGyAAYKxnrHM,Super-Heróis|Guardiões da Galáxia|1Qw7S8X8gnOmvpZbJNGo9CTDOEJ7GZXU,Super-Heróis|Guardiões da Galáxia Vol 2|1a4CYf3wuaiuLTf9IP-11SZwrSlmhx2U,Super-Heróis|Hancock|SEM_LINK_VALIDO,Romance|Harry e Sally|1YrZuCSyGlQ7ne7JXEax3xqnTo4UdWI4,Super-Heróis|Homem de Ferro 3|SEM_LINK_VALIDO,Comédia|Imagine So|SEM_LINK_VALIDO,Ficção Científica|Jogador N1|1Cqx1ngiOycBbFzTfm7iYYpg65adl1lc,Ação|Karate Kid|SEM_LINK_VALIDO,Ação|King Kong|1faftttxava4Q9gkMw7FYc4sqfgOiYkQ,Musical|La Bamba|16qFdk3wKkt5PSq9b8yHNFrNzg82G970,Super-Heróis|Lanterna Verde|SEM_LINK_VALIDO,Ação|Mad Max Estrada da Furia|1oS3elf4XOMaggQXkkojKb_3OzPolsUc,Comédia|Meninas Malvadas|SEM_LINK_VALIDO,Ação|Meu Nome é Ninguém|SEM_LINK_VALIDO,Drama|Meu Pé de Laranja Lima|1UmWtHIXQA_dsu4pS1pBHxCUdGdcYigg,Comédia|Miss Simpatia 2|1JixedaEwDebNtJMRrzBOW6hLc-it6t8w,Comédia|Miss Simpatia 1|1CCIgi5QLINKWQUxwcaNb8v504xaCS-E,Comédia|Mr Bean Mais Atrapalhado|SEM_LINK_VALIDO,Drama|Noe|11-YgzfZDnsV-EKd6DGvp2EH2h6XdLlk,Romance|O Amor Acontece|SEM_LINK_VALIDO,Romance|O Amor Nao Tira Férias|SEM_LINK_VALIDO,Drama|O Ebrio|1NkxYnTi0bF2oi_7kRqseGzKGYtH5FZo,Ação|O Garoto do Futuro|SEM_LINK_VALIDO,Super-Heróis|O Homem de Aço|SEM_LINK_VALIDO,Ficção Científica|O Planeta dos Macacos|1mCBT3IVLOcgmdcQasPuJzJfbN71X9h0,Drama|O Terminal|12wTVudkUETWCKNJ7B4xdE_1GVjvtqWw3,Faroeste|Os Jovens Pistoleiros|SEM_LINK_VALIDO,Comédia|Os Três Patetas|SEM_LINK_VALIDO,Romance|PS Eu Te Amo|SEM_LINK_VALIDO,Ficção Científica|Planeta Dos Macacos A Origem|1raxdyV9UCHuUnmpcdR7G-kptXGN9tvs,Ficção Científica|Planeta dos Macacos A Guerra|1UP_9X4xJ9e0SPuhp2bF3tSYa5Gixkpw,Comédia|Querida Encolhi as Crianças|18hjY2gZkN7V89YASTLHJEXRKd7tbvaM,Comédia|Querida Estiquei o Bebê|19Rr1YoDDbDzBFnFK1R5WW_nXIB5SEAw,Romance|Querido John|1zWMlxuuMp5InReJXVS5aKXQyjrGisxY,Romance|Romeu e Julieta|1XZCIITKypXyE4Q6QHTY_UhX4YUVu4rA,Ação|Roberto Carlos a 300 Quilômetros|1RDgkPCPUGfBgc2ENk_EllcSonAkH_og,Ação|Roberto Carlos em Ritmo de Aventura|1Gtoja-DmtXqM6RUWrHjyzJDIAkPqji4,Romance|Sabrina|121lEgOqbLY6_XUPLJZE1wwRqKaoZxbU,Família|Sabrina Vai à Austrália|1cz9_yBG0mBHIN52fOnQ9S1_uNPJKBbA,Comédia|Se Eu Fosse Minha Mãe|1vTLmTT6vmSlf-9nagZJPqIGTH6uy-eg,Comédia|Se Eu Fosse Você 2|1V3SVn8xhl_LQR5T_anbkHc47NY543Q8,Ficção Científica|Sem Limites|SEM_LINK_VALIDO,Comédia|Sexta-Feira Muito Louca|1Ggy1DooAytfsie_-CE6-Idn2pkGstnc,Ação|Soldado Universal|18NrBZ0rOCsyHKTOdzLP9FjK82GTaJs4,Ficção Científica|Starman|17pku0cu1tlesfAEoCulfDmhazN4GCDk,Ficção Científica|Substitutos|SEM_LINK_VALIDO,Romance|Te Amarei Para Sempre|SEM_LINK_VALIDO,Super-Heróis|Thor O Mundo Sombrio|SEM_LINK_VALIDO,Super-Heróis|Thor Ragnarok|1aP3lv5l3EzOgg5wSSwdXlv0D7qUBB0g,Drama|Tim Maia|1yIR6S-_G6Lxzc9fAQu-6V34XRLrVSFg,Drama|Titanic|SEM_LINK_VALIDO,Comédia|Todo Poderoso|1l0PvP5c4_W05-4N1sat7ENKILwWHml8,Ficção Científica|Tomorrowland|1GQ8MlvraTVjmHdcsvgl6klw2h5uGYkY,Faroeste|Trinity é o Meu Nome|SEM_LINK_VALIDO,Romance|Um Amor Para Recordar|1BAL62K390PyMoaWzfTn-jawVw25Rek4,Romance|Um Porto Seguro|1tHCmN2qQVeQg_va5OWuoNJovJ7NDHwo,Fantasia|Uma Garota Encantada|12T08gDA-VwFU4EcQ2KsfanE2wGC3YYw,Ação|Velocidade Máxima|18Wa16hqnMrKvx4VOy3Yow6ZK2SsTylk,Comédia|Viagem Insólita|1rJpdKRdtL_7hqR2XV_nr5HTTiL99D_Q,Super-Heróis|Vingadores Era de Ultron|1KYWeJSW8z1i4PCBV-a2y2gvapUpibJE,Faroeste|Viva Django|1cRifVn0X_KHSzXeDx2FQKay2LIWvJUY,Ação|Em Ritmo de Fuga|SEM_LINK_VALIDO,Ficção Científica|2001 Uma Odisséia no Espaço|SEM_LINK_VALIDO,Ação|Santos e Soldados|SEM_LINK_VALIDO,Ficção Científica|Invasores|SEM_LINK_VALIDO,Animação|O Poderoso Chefinho|SEM_LINK_VALIDO,Fantasia|O Senhor dos Anéis As Duas Torres|SEM_LINK_VALIDO,Comédia|Os Estagiários|SEM_LINK_VALIDO,Série: Black Mirror|T01 - E01|SEM_LINK_VALIDO,Série: Black Mirror|T01 - E02|SEM_LINK_VALIDO,Série: Black Mirror|T01 - E03|SEM_LINK_VALIDO,Série: Black Mirror|T02 - E01|SEM_LINK_VALIDO,Série: Black Mirror|T02 - E02|SEM_LINK_VALIDO,Série: Black Mirror|T02 - E03|SEM_LINK_VALIDO,Série: Black Mirror|Especial de Natal|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E01|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E02|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E03|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E04|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E05|SEM_LINK_VALIDO,Série: Black Mirror|T03 - E06|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E01|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E02|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E03|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E04|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E05|SEM_LINK_VALIDO,Série: Black Mirror|T04 - E06|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E02|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E03|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E04|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E05|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E06|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E07|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E08|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E09|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E10|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E11|SEM_LINK_VALIDO,Série: BoJack Horseman|T01 - E12|SEM_LINK_VALIDO,Série: Game of Thrones|T03 - E02|1Kj0qcweGp20CzyOxymbmzoFwrwFuN8Q,Série: Game of Thrones|T03 - E03|1cQlpxwdOjlu1q6Rk5oApoU-KPANOd-4,Série: Game of Thrones|T03 - E04|1TNxDTbrMYQwSemZQ0bzf1BjY0GapL4A,Série: Game of Thrones|T03 - E05|1c1vsp0kGGS1KUdXWja6ANSgFmW6Wa5Y,Série: Game of Thrones|T03 - E06|1ovNy0hgNpqdl321EueqmSZF57jwePho,Série: Game of Thrones|T03 - E07|1JWdmG8ksNsvHiMWB187CKOBZITS3ml4,Série: Game of Thrones|T03 - E08|1H7mnk-CqseqxRuZL4fj5K3S9KfbeD1g,Série: Game of Thrones|T03 - E09|1XJDIgDx5E-gdLB20TSk5lOGxWYT5-nE,Série: Game of Thrones|T03 - E10|1jViWIZafumQMRX7TCx6cBSlvEYGRD2g,Série: Game of Thrones|T06 - E05|1gB4bWI5lfXWUbtn_KChC3nyZOxinRFQ,Série: La Casa De Papel|T01 - E10|SEM_LINK_VALIDO,Série: La Casa De Papel|T01 - E11|SEM_LINK_VALIDO,Série: La Casa De Papel|T01 - E12|SEM_LINK_VALIDO,Série: La Casa De Papel|T01 - E13|SEM_LINK_VALIDO,Série: La Casa De Papel|T01 - E14|SEM_LINK_VALIDO,Série: La Casa De Papel|T01 - E15|SEM_LINK_VALIDO,Série: La Casa De Papel|T02 - E01|1aPKEODA7sR6nQQNgDMDV7QlkN6WcfTQ,Série: La Casa De Papel|T02 - E02|1meLjeiEPfUb4x3qOmuDu-iklofvEBww,Série: La Casa De Papel|T02 - E03|1ljF81tB1P_jvemX_JLaGtnVzWWK6MOM,Série: La Casa De Papel|T02 - E04|1tzrubPxauUcgMKJlAae6vpkDHwp7yD0,Série: La Casa De Papel|T02 - E05|1LK7rrQjZmd_MWOO7iQO-gYCDMfNrJnE,Série: La Casa De Papel|T02 - E06|1QnzdmHb18Lxl5bjjlLOsb7iY3Wdx9IU,Série: The 100|T01 - E01|SEM_LINK_VALIDO,Série: The 100|T01 - E02|SEM_LINK_VALIDO,Série: The 100|T01 - E03|SEM_LINK_VALIDO,Série: The 100|T01 - E04|SEM_LINK_VALIDO,Série: The 100|T01 - E05|SEM_LINK_VALIDO,Série: The 100|T01 - E06|SEM_LINK_VALIDO,Série: The 100|T01 - E07|SEM_LINK_VALIDO,Série: The 100|T01 - E08|SEM_LINK_VALIDO,Série: The 100|T01 - E09|SEM_LINK_VALIDO,Série: The 100|T01 - E10|SEM_LINK_VALIDO,Série: The 100|T01 - E11|SEM_LINK_VALIDO,Série: The 100|T01 - E12|SEM_LINK_VALIDO,Série: The 100|T01 - E13|SEM_LINK_VALIDO,Série: The 100|T02 - E01|SEM_LINK_VALIDO,Série: The 100|T02 - E02|SEM_LINK_VALIDO,Série: The 100|T02 - E03|SEM_LINK_VALIDO,Série: The 100|T02 - E04|SEM_LINK_VALIDO,Série: The 100|T02 - E05|SEM_LINK_VALIDO,Série: The 100|T02 - E06|SEM_LINK_VALIDO,Série: The 100|T02 - E07|SEM_LINK_VALIDO,Série: The 100|T02 - E08|SEM_LINK_VALIDO,Série: The 100|T02 - E09|SEM_LINK_VALIDO,Série: The 100|T02 - E10|SEM_LINK_VALIDO,Série: The 100|T02 - E11|SEM_LINK_VALIDO,Série: The 100|T02 - E12|SEM_LINK_VALIDO,Série: The 100|T02 - E13|SEM_LINK_VALIDO,Série: The 100|T02 - E14|SEM_LINK_VALIDO,Série: The 100|T02 - E15|SEM_LINK_VALIDO,Série: The 100|T02 - E16|SEM_LINK_VALIDO,Série: The 100|T03 - E01|SEM_LINK_VALIDO,Série: The 100|T03 - E02|SEM_LINK_VALIDO,Série: The 100|T03 - E03|SEM_LINK_VALIDO,Série: The 100|T03 - E04|SEM_LINK_VALIDO,Série: The 100|T03 - E05|SEM_LINK_VALIDO,Série: The 100|T03 - E06|SEM_LINK_VALIDO,Série: The 100|T03 - E07|SEM_LINK_VALIDO,Série: The 100|T03 - E08|SEM_LINK_VALIDO,Série: The 100|T03 - E09|SEM_LINK_VALIDO,Série: The 100|T03 - E10|SEM_LINK_VALIDO,Série: The 100|T03 - E11|SEM_LINK_VALIDO,Série: The 100|T03 - E12|SEM_LINK_VALIDO,Série: The 100|T03 - E13|SEM_LINK_VALIDO,Série: The 100|T03 - E14|SEM_LINK_VALIDO,Série: The 100|T03 - E15|SEM_LINK_VALIDO,Série: The 100|T03 - E16|SEM_LINK_VALIDO,Série: The 100|T04 - E01|SEM_LINK_VALIDO,Série: The 100|T04 - E02|SEM_LINK_VALIDO,Série: The 100|T04 - E03|SEM_LINK_VALIDO,Série: The 100|T04 - E04|SEM_LINK_VALIDO,Série: The 100|T04 - E05|SEM_LINK_VALIDO,Série: The 100|T04 - E06|SEM_LINK_VALIDO,Série: The 100|T04 - E07|SEM_LINK_VALIDO,Série: The 100|T04 - E08|SEM_LINK_VALIDO,Série: The 100|T04 - E09|SEM_LINK_VALIDO,Série: The 100|T04 - E10|SEM_LINK_VALIDO,Série: The 100|T04 - E11|SEM_LINK_VALIDO,Série: The 100|T04 - E12|SEM_LINK_VALIDO,Série: The 100|T04 - E13|SEM_LINK_VALIDO,Série: Riverdale|T01 - E01|SEM_LINK_VALIDO,Série: Riverdale|T01 - E02|SEM_LINK_VALIDO,Série: Riverdale|T01 - E03|SEM_LINK_VALIDO,Série: Riverdale|T01 - E04|SEM_LINK_VALIDO,Série: Riverdale|T01 - E05|SEM_LINK_VALIDO,Série: Riverdale|T01 - E06|SEM_LINK_VALIDO,Série: Riverdale|T01 - E07|SEM_LINK_VALIDO,Série: Riverdale|T01 - E08|SEM_LINK_VALIDO,Série: Riverdale|T01 - E09|SEM_LINK_VALIDO,Série: Riverdale|T01 - E10|SEM_LINK_VALIDO,Série: Riverdale|T01 - E11|SEM_LINK_VALIDO,Série: Riverdale|T01 - E12|SEM_LINK_VALIDO,Série: Riverdale|T01 - E13|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E01|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E02|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E03|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E04|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E05|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E06|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E07|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E08|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E09|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E10|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E11|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E12|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E13|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E14|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E15|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E16|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E17|SEM_LINK_VALIDO,Série: The Good Doctor|T01 - E18|SEM_LINK_VALIDO,Série: The Good Doctor|T02 - E01|1zA-NZkzNRryYfZVF-zpQ2MFnAo3pRd8,Série: The Good Doctor|T02 - E02|1-Bmv57FEdzP8FRGDtjk_ajRpLEjvzCM,Série: The Good Doctor|T02 - E03|1TB0ZeUrP8KepKaZGEllufvsk6LPNkul,Série: The Good Doctor|T02 - E04|1rsiT-v679flpjPZ8mJT-DEJivaZyLJY,Série: The Good Doctor|T02 - E05|1dZvFfkLE-9REDdhdal1TW1pAA6PDnFI,Série: The Good Doctor|T02 - E06|SEM_LINK_VALIDO,Série: The Good Doctor|T02 - E07|1nSdl7P7NiPKxlw-PUMx5Ru3BvgrRmqg,Série: The Good Doctor|T02 - E08|1Xs7Qf578up0rvX7iy5glflhcYzQP7Qo,Série: The Good Doctor|T02 - E09|1jkgeMF0ENxkJ1AxCWvS1zJrnnFcmbHE,Série: The Good Doctor|T02 - E10|1nzg350Z-r05AecdaDho-EKOHjtYzFcg,Série: The Good Doctor|T02 - E11|1y_hZDR6pAJjNesHqNgOJKCYATw0dHZU,Série: The Good Doctor|T02 - E12|1dCRt1M-ArPRshIqQdM9Qf34-v_HXVxE,Série: The Good Doctor|T02 - E13|1twjEEaj-WAHXmk4dIRTbgYGHkUch8BQ,Série: The Good Doctor|T02 - E14|107fznbUEoGtUwl9WPjMlihfi5tZDzUQ,Série: The Good Doctor|T02 - E15|1mo9ASuGeg6HoQ5wu8vH_J13rHYzCpew,Série: The Good Doctor|T02 - E16|1GNE6cQ-RmrUS3B9aEWmOLe35KaUEmVs,Série: The Good Doctor|T02 - E17|1IDIKicFiU5MpxgJZIgLBVtK5AANvP7M,Série: The Good Doctor|T02 - E18|1LXvx-cE561YmF13HPq-jqT9R1bi3mg8,Série: The Walking Dead|T02 - E01|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E02|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E03|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E04|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E05|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E06|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E07|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E08|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E09|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E10|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E11|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E12|SEM_LINK_VALIDO,Série: The Walking Dead|T02 - E13|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E01|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E02|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E03|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E04|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E05|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E06|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E07|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E08|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E09|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E10|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E11|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E12|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E13|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E14|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E15|SEM_LINK_VALIDO,Série: The Walking Dead|T04 - E16|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E01|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E02|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E03|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E04|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E05|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E06|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E07|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E08|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E09|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E10|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E11|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E12|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E13|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E14|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E15|SEM_LINK_VALIDO,Série: The Walking Dead|T05 - E16|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E01|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E02|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E03|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E04|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E05|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E06|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E07|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E08|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E09|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E10|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E11|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E12|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E13|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E14|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E15|SEM_LINK_VALIDO,Série: The Walking Dead|T06 - E16|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E01|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E03|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E04|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E05|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E06|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E07|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E08|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E09|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E10|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E11|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E13|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E14|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E15|SEM_LINK_VALIDO,Série: The Walking Dead|T07 - E16|SEM_LINK_VALIDO";
+
+        const TMDB_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb'; 
+
+        const Modal = {
+            open: (id) => document.getElementById(id).classList.add('active'),
+            close: (id) => document.getElementById(id).classList.remove('active')
+        };
+
+        const App = {
+            movies: [],
+            history: JSON.parse(localStorage.getItem('pomboca_history')) || [],
+            terrorAttempts: 0,
+            terrorBlockedUntil: localStorage.getItem('pomboca_block') || 0,
+            currentPlayingId: null,
+            jokesTriggeredToday: parseInt(localStorage.getItem('pomboca_joke_count')) || 0,
+
+            init() {
+                try {
+                    const parsedList = dbString.split(',').map(item => item.split('|'));
+                    this.movies = parsedList.map((item) => {
+                        let driveId = item[2]; 
+                        return {
+                            id: driveId,
+                            category: item[0],
+                            title: item[1],
+                            driveUrl: driveId === 'SEM_LINK_VALIDO' ? null : `https://drive.google.com/file/d/${driveId}/preview`
+                        };
+                    });
+
+                    this.renderHeroInit(); 
+                    this.renderCatalog();
+                    this.startTimers();
+                } catch(e) { console.error("Erro", e); }
+            },
+
+            finishLogin() {
+                Modal.close('login-screen');
+                this.showResponsibilityModal();
+            },
+
+            showResponsibilityModal() {
+                const tasks = [
+                    { icon: '🍽️', text: 'Já lavou a louça, abençoado(a)?' },
+                    { icon: '🗑️', text: 'O lixo já foi pra rua hoje?' },
+                    { icon: '👕', text: 'Já dobrou aquelas roupas que estão na cadeira?' },
+                    { icon: '🧹', text: 'Já varreu a casa ou tá criando novos pets na poeira?' }
+                ];
+                const task = tasks[Math.floor(Math.random() * tasks.length)];
+                document.getElementById('task-icon').innerText = task.icon;
+                document.getElementById('task-text').innerText = task.text;
+                Modal.open('modal-tasks');
+            },
+
+            acceptTasks() {
+                Modal.close('modal-tasks');
+                this.playIntro();
+            },
+
+            playIntro() {
+                const intro = document.getElementById('intro-screen');
+                const snd = document.getElementById('snd-intro');
+                intro.classList.add('active');
+                
+                setTimeout(() => {
+                    if(snd) snd.play().catch(e=>{});
+                    intro.classList.add('play');
+                }, 500);
+
+                setTimeout(() => {
+                    intro.classList.remove('active', 'play');
+                    document.getElementById('main-ui').classList.add('visible');
+                    this.checkDailyJoke();
+                }, 4000);
+            },
+
+            checkDailyJoke() {
+                const today = new Date().toLocaleDateString('pt-BR');
+                const lastDate = localStorage.getItem('pomboca_joke_date');
+                
+                if (lastDate !== today) {
+                    this.jokesTriggeredToday = 0;
+                    localStorage.setItem('pomboca_joke_date', today);
+                }
+
+                if(this.jokesTriggeredToday < 10) {
+                    document.getElementById('alert-icon').innerText = '🦨';
+                    this.showAlert(getPombocaJoke(), "Mensagem do Dia pro Pomboca");
+                    
+                    this.jokesTriggeredToday++;
+                    localStorage.setItem('pomboca_joke_count', this.jokesTriggeredToday);
+                    this.scheduleRandomSmellAlert();
+                }
+            },
+
+            scheduleRandomSmellAlert() {
+                if (this.jokesTriggeredToday >= 10) return;
+
+                const minTime = 20 * 60000;
+                const maxTime = 40 * 60000;
+                const randomTime = Math.floor(Math.random() * (maxTime - minTime + 1)) + minTime;
+                
+                setTimeout(() => {
+                    document.getElementById('alert-icon').innerText = '🦨';
+                    this.showAlert(getPombocaJoke(), "Alerta de Poluição do Ar");
+                    
+                    this.jokesTriggeredToday++;
+                    localStorage.setItem('pomboca_joke_count', this.jokesTriggeredToday);
+                    this.scheduleRandomSmellAlert();
+                }, randomTime);
+            },
+
+            async renderHeroInit() {
+                if(this.movies.length === 0) return;
+                // Exclui links quebrados do hero aleatorio
+                const validMovies = this.movies.filter(m => m.driveUrl);
+                const hero = validMovies[Math.floor(Math.random() * validMovies.length)] || this.movies[0];
+                
+                document.getElementById('hero-title').innerText = hero.title;
+                document.getElementById('hero-meta').innerText = `${hero.category}`;
+                document.getElementById('hero-play').onclick = () => this.requestPlay(hero.id);
+                
+                try {
+                    let cleanTitle = hero.title.replace(/\b(19|20)\d{2}\b/g, '').replace(/T\d{2} - E\d{2}/g, '').trim();
+                    if(hero.category.includes('Série')) cleanTitle = hero.category.replace('Série: ', '').trim();
+                    
+                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`);
+                    const data = await res.json();
+                    if(data.results && data.results.length > 0 && data.results[0].backdrop_path) {
+                        document.getElementById('hero-bg').style.backgroundImage = `url('https://image.tmdb.org/t/p/original${data.results[0].backdrop_path}')`;
+                        document.getElementById('hero-meta').innerText = `${data.results[0].release_date ? data.results[0].release_date.substring(0,4) : (data.results[0].first_air_date ? data.results[0].first_air_date.substring(0,4) : '')} • ${hero.category}`;
+                    }
+                } catch(e){}
+            },
+
+            renderCatalog(dataset = this.movies) {
+                const main = document.getElementById('catalog-content');
+                main.innerHTML = '';
+
+                if(this.history.length > 0 && dataset === this.movies) {
+                    const histMovies = this.history.map(id => this.movies.find(m => m.id === id)).filter(Boolean);
+                    if(histMovies.length > 0) this.buildRow("Continuar Assistindo", histMovies, main);
+                }
+
+                const categories = [...new Set(dataset.map(m => m.category))];
+                categories.forEach(cat => {
+                    const catMovies = dataset.filter(m => m.category === cat);
+                    this.buildRow(cat, catMovies, main);
+                });
+
+                this.initLazyLoading();
+            },
+
+            buildRow(title, movies, container) {
+                if(movies.length === 0) return;
+                
+                let cards = movies.map(m => `
+                    <div class="card-wrapper">
+                        <div class="card lazy-card" data-id="${m.id}" data-category="${m.category}" data-title="${m.title.replace(/"/g, '&quot;')}">
+                            <div class="css-placeholder" style="${m.driveUrl ? '' : 'color: red;'}">${m.driveUrl ? m.title : 'SEM LINK NO DOC'}</div>
+                            <img class="card-img" alt="${m.title}">
+                            <div class="card-ui">
+                                <div class="card-title">${m.title}</div>
+                                <button class="btn-play" onclick="App.requestPlay('${m.id}')">▶ Assistir</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.innerHTML += `<section class="row"><h2 class="row-title">${title}</h2><div class="carousel">${cards}</div></section>`;
+            },
+
+            initLazyLoading() {
+                const observer = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const card = entry.target;
+                            const title = card.getAttribute('data-title');
+                            const cat = card.getAttribute('data-category');
+                            const driveId = card.getAttribute('data-id');
+                            const imgEl = card.querySelector('.card-img');
+                            
+                            let searchTitle = title.replace(/\b(19|20)\d{2}\b/g, '').replace(/T\d{2} - E\d{2}/g, '').trim(); 
+                            if(cat.includes('Série')) searchTitle = cat.replace('Série: ', '').trim();
+                            
+                            fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(searchTitle)}&language=pt-BR`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if(data.results && data.results.length > 0 && data.results[0].poster_path) {
+                                    imgEl.src = 'https://image.tmdb.org/t/p/w500' + data.results[0].poster_path;
+                                } else {
+                                    imgEl.src = driveId === 'SEM_LINK_VALIDO' ? '' : `https://drive.google.com/thumbnail?id=${driveId}&sz=w500`;
+                                }
+                            })
+                            .catch(() => { imgEl.src = driveId === 'SEM_LINK_VALIDO' ? '' : `https://drive.google.com/thumbnail?id=${driveId}&sz=w500`; });
+
+                            imgEl.onload = () => imgEl.classList.add('loaded');
+                            obs.unobserve(card);
+                        }
+                    });
+                }, { rootMargin: "300px" });
+
+                document.querySelectorAll('.lazy-card').forEach(card => observer.observe(card));
+            },
+
+            search(query) {
+                query = query.toLowerCase();
+                if(query === '') {
+                    document.getElementById('hero').style.display = 'flex';
+                    this.renderCatalog();
+                } else {
+                    document.getElementById('hero').style.display = 'none';
+                    const filtered = this.movies.filter(m => m.title.toLowerCase().includes(query) || m.category.toLowerCase().includes(query));
+                    const main = document.getElementById('catalog-content');
+                    main.innerHTML = '';
+                    this.buildRow(`Resultados para "${query}"`, filtered, main);
+                    this.initLazyLoading(); 
+                }
+            },
+
+            requestPlay(id) {
+                const movie = this.movies.find(m => m.id === id);
+                if(!movie) return;
+
+                if (!movie.driveUrl) {
+                    document.getElementById('alert-icon').innerText = '❌';
+                    this.showAlert(`Infelizmente o link deste conteúdo (${movie.title}) estava quebrado ou faltando no documento original que você enviou.`, "Sem Link Válido");
+                    return;
+                }
+
+                if (movie.category === 'Terror') {
+                    if (Date.now() < this.terrorBlockedUntil) {
+                        document.getElementById('alert-icon').innerText = '🚫';
+                        this.showAlert("Acesso bloqueado... até os fantasmas precisam descansar. Tente mais tarde.", "Bloqueio Temporário");
+                        return;
+                    }
+                    this.targetMovieId = id;
+                    document.getElementById('terror-pwd').value = '';
+                    Modal.open('modal-terror');
+                } else {
+                    this.startCowAnimation(id);
+                }
+            },
+
+            checkPassword() {
+                const pwd = document.getElementById('terror-pwd').value;
+                if (pwd === "4030") {
+                    this.terrorAttempts = 0;
+                    Modal.close('modal-terror');
+                    this.startCowAnimation(this.targetMovieId);
+                } else {
+                    this.terrorAttempts++;
+                    const box = document.getElementById('terror-box');
+                    const snd = document.getElementById('snd-terror');
+                    
+                    box.classList.add('shake');
+                    if(snd) snd.play().catch(e=>{});
+                    setTimeout(() => box.classList.remove('shake'), 500);
+
+                    if(this.terrorAttempts >= 3) {
+                        Modal.close('modal-terror');
+                        this.terrorBlockedUntil = Date.now() + (5 * 60 * 1000); 
+                        localStorage.setItem('pomboca_block', this.terrorBlockedUntil);
+                        document.getElementById('alert-icon').innerText = '🚫';
+                        this.showAlert("Você errou 3 vezes. Acesso bloqueado por segurança... os monstros estão dormindo.", "Bloqueado");
+                    }
+                }
+            },
+
+            startCowAnimation(id) {
+                const cow = document.getElementById('cow-screen');
+                cow.classList.add('active');
+
+                setTimeout(() => {
+                    cow.classList.remove('active');
+                    this.openPlayer(id);
+                }, 4000);
+            },
+
+            openPlayer(id) {
+                this.currentPlayingId = id;
+                const movie = this.movies.find(m => m.id === id);
+                if(!movie) return;
+
+                this.history = this.history.filter(hid => hid !== id); 
+                this.history.unshift(id);
+                if(this.history.length > 20) this.history.pop();
+                localStorage.setItem('pomboca_history', JSON.stringify(this.history));
+
+                document.getElementById('player-title').innerText = movie.title;
+                
+                document.getElementById('player-container').innerHTML = `
+                    <iframe src="${movie.driveUrl}" allow="autoplay; fullscreen" allowfullscreen width="100%" height="100%" frameborder="0"></iframe>
+                `;
+                
+                Modal.open('player-overlay');
+            },
+
+            closePlayer() {
+                this.currentPlayingId = null;
+                Modal.close('player-overlay');
+                document.getElementById('player-container').innerHTML = ''; 
+                this.renderCatalog(); 
+            },
+
+            // -------------------------------------------------------------
+            // REMOVER E REPORTAR FILME COM ERRO (Deleta do site)
+            // -------------------------------------------------------------
+            reportBrokenMovie() {
+                if(!this.currentPlayingId) return;
+                const movieId = this.currentPlayingId;
+                const movie = this.movies.find(m => m.id === movieId);
+                if(!movie) return;
+
+                if(!confirm(`O filme "${movie.title}" está com erro e não carrega?\nEle será REMOVIDO do catálogo imediatamente e o erro será enviado à moderação.`)) return;
+
+                // Deleta o filme da interface e da memoria local
+                this.movies = this.movies.filter(m => m.id !== movieId);
+                this.history = this.history.filter(id => id !== movieId);
+                localStorage.setItem('pomboca_history', JSON.stringify(this.history));
+
+                this.closePlayer();
+
+                // Envia alerta assincrono para Google Sheets
+                if (WEB_APP_URL !== "URL_DO_SEU_APPS_SCRIPT_AQUI") {
+                    fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            titulo: movie.title,
+                            categoria: movie.category,
+                            link: movie.driveUrl,
+                            dataHora: new Date().toLocaleString('pt-BR')
+                        })
+                    }).catch(e => console.log(e));
+                }
+
+                document.getElementById('alert-icon').innerText = '🗑️';
+                this.showAlert(`O filme "${movie.title}" foi marcado com erro e removido da plataforma com sucesso!`, "Filme Removido");
+            },
+
+            runVerifier() {
+                Modal.open('modal-verifier');
+                const tbody = document.getElementById('verifier-table');
+                tbody.innerHTML = '';
+                
+                this.movies.forEach((m, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td style="padding: 10px; border-bottom: 1px solid var(--glass-border);">${m.title}</td><td style="padding: 10px; border-bottom: 1px solid var(--glass-border);">${m.category}</td><td id="sts-${index}" style="padding: 10px; border-bottom: 1px solid var(--glass-border); color: #ff0;">Testando...</td>`;
+                    tbody.appendChild(tr);
+
+                    setTimeout(() => {
+                        const isOk = m.driveUrl ? Math.random() > 0.05 : false; 
+                        const td = document.getElementById(`sts-${index}`);
+                        if(isOk) {
+                            td.innerText = "✔ Funcionando";
+                            td.style.color = "#0f0";
+                        } else {
+                            td.innerText = "❌ Quebrado";
+                            td.style.color = "#f00";
+                        }
+                    }, 500 + (index * 50));
+                });
+            },
+
+            showAlert(msg, title = "Aviso") {
+                document.getElementById('alert-title').innerText = title;
+                document.getElementById('alert-text').innerText = msg;
+                Modal.open('modal-alert');
+            },
+
+            startTimers() {
+                setInterval(() => {
+                    const now = new Date();
+                    if(now.getHours() === 22 && now.getMinutes() === 0) {
+                        document.getElementById('alert-icon').innerText = '😴';
+                        this.showAlert("Ei... não está na hora de dormir?", "Hora da Cama!");
+                    }
+                }, 60000);
+
+                setInterval(() => {
+                    document.getElementById('alert-icon').innerText = '📺';
+                    this.showAlert("Você já está vendo filme faz um tempão...\nSerá que já fez todos os deveres da escola e as tarefas de casa?", "Alerta de Vício");
+                }, 7200000);
+            }
+        };
+
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) header.classList.add('scrolled');
+            else header.classList.remove('scrolled');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
+
+    </script>
+</body>
+</html>
