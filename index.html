@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#03030a">
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>PomboCaFlix Ultra Max</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;800&family=Syncopate:wght@300;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+
+    <style>
+        :root {
+            --bg-cinema: #03030a;
+            --bg-gradient: radial-gradient(circle at top right, #1a1a24 0%, #03030a 70%);
+            --glass-1: rgba(255, 255, 255, 0.03);
+            --glass-2: rgba(255, 255, 255, 0.07);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-1: #e50914; 
+            --neon-2: #ff4d4d;
+            --neon-3: #00eaff;
+            --gradient: linear-gradient(135deg, var(--neon-1), var(--neon-2));
+            --font-display: 'Syncopate', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --header-h: 80px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; background-color: var(--bg-cinema); }
+        body { font-family: var(--font-body); color: #fff; overflow-x: hidden; min-height: 100vh; background: var(--bg-gradient); background-attachment: fixed; -webkit-font-smoothing: antialiased; }
+        button, input { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
+        button { cursor: pointer; }
+        ::-webkit-scrollbar { display: none; }
+
+        /* LUZES AMBIENTES */
+        .ambient-light { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: -1; overflow: hidden; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3; animation: float 20s infinite alternate cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .blob-1 { width: 50vw; height: 50vw; background: var(--neon-2); top: -20vh; left: -10vw; }
+        .blob-2 { width: 60vw; height: 60vw; background: var(--neon-1); bottom: -30vh; right: -10vw; animation-delay: -5s; }
+        @keyframes float { 100% { transform: translate(10vw, 10vh) scale(1.2); } }
+
+        #main-ui { opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+        #main-ui.visible { opacity: 1; pointer-events: all; }
+
+        /* TELAS DE CARREGAMENTO & INTRO */
+        #loading-screen { position: fixed; inset: 0; background: var(--bg-cinema); z-index: 100002; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease; }
+        .spinner { width: 50px; height: 50px; border: 3px solid var(--glass-2); border-top: 3px solid var(--neon-1); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 30px; }
+        .loading-text { font-family: var(--font-body); font-weight: 300; font-size: 16px; color: #fff; text-align: center; letter-spacing: 3px; text-transform: uppercase; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #intro-screen { position: fixed; inset: 0; background: #000; z-index: 99999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 1s ease; }
+        #intro-screen.active { opacity: 1; pointer-events: all; }
+        .intro-logo { font-family: var(--font-display); font-weight: 300; font-size: clamp(30px, 8vw, 70px); color: #fff; letter-spacing: 5px; transform: scale(0.5); opacity: 0; transition: all 3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .intro-logo span { font-weight: 700; color: var(--neon-1); }
+        #intro-screen.play .intro-logo { transform: scale(1); opacity: 1; }
+
+        /* TELA DE TRANSIÇÃO */
+        #cow-screen { position: fixed; inset: 0; background: #000; z-index: 99998; display: none; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; overflow: hidden; }
+        #cow-screen.active { display: flex; opacity: 1; pointer-events: all; }
+        .amanda-bg-blur { position: absolute; inset: -10%; background-size: cover; background-position: center; filter: blur(20px) brightness(0.3); z-index: 1; }
+        .amanda-bg-contain { position: absolute; inset: 0; background-size: contain; background-position: center; background-repeat: no-repeat; z-index: 2; animation: amandaPulse 6s ease-in-out forwards; }
+        @keyframes amandaPulse { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
+        .amanda-vignette { position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 0%, #000 100%); z-index: 3; pointer-events: none;}
+        .cow-content { position: absolute; bottom: 10%; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 15px; background: rgba(0,0,0,0.7); padding: 20px 50px; border-radius: 30px; backdrop-filter: blur(15px); border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
+        .cow-text { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 3vw, 24px); text-align: center; letter-spacing: 2px; color: #fff; text-transform: uppercase; animation: pulseText 1.5s infinite alternate; }
+        .milk-drops { font-size: 30px; animation: drip 1s infinite; }
+        @keyframes pulseText { from { opacity: 0.6; text-shadow: 0 0 10px var(--neon-1); } to { opacity: 1; text-shadow: 0 0 20px var(--neon-1); } }
+        @keyframes drip { 0% { transform: translateY(-10px); opacity: 1; } 100% { transform: translateY(30px); opacity: 0; } }
+
+        /* MODAIS E TOASTS (Aumentados) */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 100001; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-box { background: var(--glass-2); border: 1px solid var(--glass-border); padding: 40px; border-radius: 16px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.8); transform: translateY(30px); transition: 0.4s ease; max-height: 80vh; overflow-y: auto;}
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-icon { font-size: 60px; margin-bottom: 20px; }
+        .modal-title { font-family: var(--font-display); font-size: 22px; margin-bottom: 15px; color: var(--neon-1); line-height: 1.4;}
+        .modal-text { font-size: 18px; line-height: 1.6; margin-bottom: 30px; color: #ccc; }
+        .btn-modal { background: #fff; color: #000; font-weight: 800; padding: 15px 30px; border-radius: 8px; font-size: 18px; transition: 0.3s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; margin-bottom: 10px;}
+        .btn-modal:hover { transform: scale(1.05); background: var(--neon-1); color: #fff; box-shadow: 0 0 20px rgba(229, 9, 20, 0.5); }
+        .password-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--neon-1); color: #fff; font-size: 28px; text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-family: var(--font-display); letter-spacing: 15px; }
+        
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+
+        /* TOAST GIGANTE PARA PIADAS */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100005; display: flex; flex-direction: column; gap: 15px; }
+        .toast { background: rgba(15, 15, 20, 0.95); border-left: 6px solid var(--neon-1); color: #fff; padding: 25px 30px; border-radius: 12px; font-size: 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); transform: translateX(120%); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); max-width: 450px; line-height: 1.5; font-weight: 400;}
+        .toast strong { font-size: 20px; font-family: var(--font-display); color: var(--neon-2);}
+        .toast.show { transform: translateX(0); }
+
+        /* CÂMERA E SCANNER BIOMÉTRICO REAL */
+        #video-container { position: relative; width: 100%; max-width: 300px; margin: 0 auto 20px; border-radius: 12px; overflow: hidden; border: 2px solid var(--glass-border); background: #000;}
+        #camera-stream { width: 100%; display: block; transform: scaleX(-1); }
+        .scanner-line { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--neon-3); box-shadow: 0 0 15px var(--neon-3); display: none; z-index: 10; }
+        .scanning .scanner-line { display: block; animation: scanAnim 2s linear infinite; }
+        @keyframes scanAnim { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
+        .ai-log { background: #000; font-family: monospace; color: #0f0; font-size: 14px; padding: 15px; border-radius: 6px; text-align: left; height: 120px; overflow-y: auto; margin-bottom: 20px; display: none; border: 1px solid #333;}
+        .ai-log span { display: block; margin-bottom: 5px; }
+
+        /* HEADER E FOTOS DE PERFIL */
+        header { position: fixed; top: 0; left: 0; width: 100%; height: var(--header-h); display: flex; align-items: center; justify-content: space-between; padding: 0 4%; z-index: 1000; transition: background 0.4s; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); }
+        header.scrolled { background: rgba(15,15,20,0.98); backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .header-left { display: flex; align-items: center; gap: 40px; }
+        .brand { font-family: var(--font-display); font-size: 22px; display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none;}
+        .brand span { font-weight: 800; letter-spacing: 1px; color: #fff; }
+        .brand span .highlight { color: var(--neon-1); }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { font-size: 14px; font-weight: 600; color: #ccc; text-decoration: none; transition: 0.3s; cursor: pointer; }
+        .nav-links a:hover { color: #fff; text-shadow: 0 0 10px #fff; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .search-box { display: flex; align-items: center; background: var(--glass-2); border: 1px solid var(--glass-border); border-radius: 30px; padding: 8px 15px; transition: 0.3s; }
+        .search-box:focus-within { border-color: var(--neon-1); background: var(--glass-1); }
+        .search-box input { color: #fff; width: 140px; font-size: 14px; transition: width 0.3s; }
+        .search-box input:focus { width: 220px; }
+
+        .profile-container { width: 44px; height: 44px; min-width: 44px; border-radius: 50%; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.7); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; background: var(--glass-2); }
+        .header-left .profile-container { width: 40px; height: 40px; min-width: 40px; }
+        .profile-container:hover { transform: scale(1.1); border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+        .pomboca-global-img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+        
+        /* BANNER HERO */
+        #hero { position: relative; width: 100vw; height: 80vh; min-height: 500px; display: flex; flex-direction: column; justify-content: flex-end; padding: 6% 4%; overflow: hidden; }
+        .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: top center; z-index: 0; filter: brightness(0.6) saturate(1.2); transition: background-image 1s ease; animation: heroZoom 30s infinite alternate linear; }
+        @keyframes heroZoom { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+        .hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, var(--bg-cinema) 0%, transparent 50%, rgba(0,0,0,0.8) 100%); }
+        .hero-content { position: relative; z-index: 10; max-width: 800px; }
+        .hero-badge { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; padding: 6px 12px; border-radius: 4px; background: rgba(229, 9, 20, 0.2); border: 1px solid var(--neon-1); color: #fff; margin-bottom: 15px; }
+        .hero-title { font-family: var(--font-display); font-size: clamp(40px, 6vw, 80px); line-height: 1; margin-bottom: 15px; text-shadow: 0 4px 20px #000; }
+        .hero-meta { font-size: 16px; color: #ccc; font-weight: 600; margin-bottom: 25px; display: flex; gap: 15px; align-items: center;}
+        .btn-primary { background: #fff; color: #000; padding: 15px 35px; font-size: 18px; font-weight: 800; border-radius: 6px; transition: all 0.3s; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;}
+        .btn-primary:hover { background: var(--neon-1); color: #fff; transform: scale(1.05); }
+
+        /* SESSÃO DESTAQUE POMBOCA (IMAGEM GIGANTE) */
+        #hall-of-shame { padding: 4% 4%; display: flex; justify-content: center; position: relative; z-index: 20; margin-top: -50px; }
+        .shame-container { display: flex; align-items: center; gap: 40px; background: rgba(15,15,20,0.9); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-width: 1100px; width: 100%; }
+        .shame-photo { width: 300px; height: 300px; border-radius: 50%; border: 6px solid var(--neon-1); box-shadow: 0 0 40px rgba(229, 9, 20, 0.6); overflow: hidden; flex-shrink: 0;}
+        .shame-text { flex: 1; }
+        .shame-text h2 { font-family: var(--font-display); font-size: 28px; color: #fff; margin-bottom: 15px; text-shadow: 0 2px 10px rgba(229, 9, 20, 0.8); }
+        .shame-text p { font-size: 18px; line-height: 1.6; color: #ddd; margin-bottom: 25px; font-style: italic; border-left: 4px solid var(--neon-1); padding-left: 15px; }
+        .btn-camera { background: transparent; border: 2px solid #fff; color: #fff; padding: 15px 25px; border-radius: 8px; font-weight: 800; font-size: 16px; transition: all 0.3s; cursor: pointer; display: inline-block; }
+        .btn-camera:hover { background: #fff; color: #000; box-shadow: 0 0 20px rgba(255,255,255,0.5); transform: scale(1.05);}
+
+        /* CATÁLOGO CARROSSEL E SÉRIES */
+        main { position: relative; z-index: 20; padding-bottom: 100px; }
+        .row { margin-bottom: 40px; }
+        .row-title { font-size: 22px; font-weight: 800; padding: 0 4%; margin-bottom: 10px; color: #fff; display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        .row-title::before { content: ''; width: 4px; height: 24px; background: var(--neon-1); display: block; border-radius: 2px; }
+        .carousel { display: flex; overflow-x: auto; gap: 15px; padding: 10px 4% 40px 4%; scroll-behavior: smooth; scroll-snap-type: x mandatory; }
+        .card-wrapper { flex: 0 0 200px; scroll-snap-align: start; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), z-index 0s; position: relative; }
+        .card-wrapper:hover { transform: scale(1.15); z-index: 50; }
+        .card { position: relative; width: 100%; aspect-ratio: 2/3; border-radius: 8px; background: #161622; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); overflow: hidden; transition: box-shadow 0.4s ease; border: 1px solid var(--glass-border); }
+        .card-wrapper:hover .card { box-shadow: 0 20px 40px rgba(0,0,0,0.8); border-color: var(--neon-1); }
+        .css-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 15px; text-align: center; font-size: 14px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.4); background: radial-gradient(circle, #2a2a35 0%, #111 100%); z-index: 1;}
+        .card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.5s ease, filter 0.4s ease; }
+        .card-img.loaded { opacity: 1; }
+        .card-wrapper:hover .card-img { filter: brightness(1.1); }
+        .card-ui { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; opacity: 0; transition: 0.4s; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, transparent 60%); border-radius: 12px; }
+        .card-wrapper:hover .card-ui { opacity: 1; transform: translateY(0) translateZ(30px); }
+        .card-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; text-shadow: 0 2px 10px #000; line-height: 1.2; }
+        .card-rating { font-size: 16px; margin-bottom: 10px; line-height: 1.2;}
+        .btn-play { background: #fff; color: #000; padding: 10px; border-radius: 4px; font-size: 14px; font-weight: bold; width: 100%; text-align: center; border: none; transition: 0.3s; cursor: pointer;}
+        .btn-play:hover { background: var(--neon-1); color: #fff; }
+
+        /* LISTA DE EPISÓDIOS (MODAL DE SÉRIES) */
+        .season-block { margin-bottom: 30px; text-align: left; }
+        .season-title { color: var(--neon-1); font-weight: 800; font-size: 22px; border-bottom: 2px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 15px; }
+        .episodes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+        .ep-btn { background: var(--glass-2); border: 1px solid var(--glass-border); padding: 15px; color: #fff; font-weight: bold; font-size: 16px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .ep-btn:hover { background: var(--neon-1); transform: scale(1.05); }
+
+        /* PLAYER IMAX */
+        #player-overlay { position: fixed; inset: 0; background: #000; z-index: 999999; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+        #player-overlay.active { opacity: 1; pointer-events: all; }
+        .player-header { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .player-title { font-family: var(--font-display); font-size: 20px; text-shadow: 0 2px 5px #000; }
+        .header-actions { display: flex; gap: 15px; align-items: center; }
+        .btn-report { background: rgba(255, 0, 76, 0.2); border: 1px solid var(--neon-1); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; transition: 0.3s; cursor:pointer; }
+        .btn-report:hover { background: var(--neon-1); box-shadow: 0 0 15px var(--neon-1); }
+        .btn-close { width: 45px; height: 45px; border-radius: 50%; background: var(--glass-2); color: #fff; font-size: 20px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); transition: 0.3s; border: 1px solid var(--glass-border); cursor:pointer;}
+        .btn-close:hover { background: var(--neon-1); transform: rotate(90deg); border-color: var(--neon-1); }
+        .player-container { flex: 1; width: 100%; position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; padding-top: 60px;}
+        iframe { width: 95%; height: 90%; border: none; border-radius: 12px; box-shadow: 0 0 50px rgba(0,0,0,1); background: #000; }
+
+        footer { padding: 40px 4%; text-align: center; border-top: 1px solid var(--glass-border); margin-top: 40px; background: rgba(0,0,0,0.5); }
+        .footer-logo { font-family: var(--font-display); font-size: 18px; color: #fff; margin-bottom: 10px; }
+        .footer-logo span { color: var(--neon-1); }
+        .footer-text { font-size: 14px; color: #888; margin-bottom: 5px; }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-title { font-size: 32px; }
+            .card-wrapper { flex: 0 0 150px; }
+            .shame-container { flex-direction: column; text-align: center; padding: 20px; }
+            .shame-photo { width: 220px; height: 220px; }
+            .shame-text h2 { font-size: 22px; }
+            .shame-text p { font-size: 16px; border-left: none; border-top: 4px solid var(--neon-1); padding-left: 0; padding-top: 15px; }
+            iframe { width: 100%; height: 100%; border-radius: 0; }
+            .player-container { padding-top: 0; }
+            .header-actions { gap: 8px; }
+            .btn-report { font-size: 10px; padding: 6px; }
+            .toast { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-light"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+    <div id="toast-container"></div>
+
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loading-msg">INICIALIZANDO SISTEMA...</div>
+    </div>
+
+    <div id="login-screen" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon">🔐</div>
+            <h2 class="modal-title">AUTENTICAÇÃO NECESSÁRIA</h2>
+            <p class="modal-text">Para contornar a segurança do navegador e assistir os filmes sem bloqueio, faça login na sua conta do Google abaixo e depois clique em Continuar.</p>
+            <button class="btn-modal" style="background:#fff; color:#000; margin-bottom: 15px;" onclick="window.open('https://drive.google.com/', '_blank')">
+                Fazer Login no Google
+            </button>
+            <button class="btn-modal" style="background:var(--neon-1); color:#fff;" onclick="App.finishLogin()">Já fiz Login / Continuar</button>
+        </div>
+    </div>
+
+    <div id="modal-tasks" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon" id="task-icon">🧹</div>
+            <h2 class="modal-title">INSPEÇÃO DE ROTINA</h2>
+            <p class="modal-text" id="task-text">Carregando...</p>
+            <button class="btn-modal" onclick="Modal.close('modal-tasks')">Tudo Certo, Chefia!</button>
+        </div>
+    </div>
+
+    <div id="intro-screen">
+        <div class="intro-logo">POMBOCA<span>FLIX</span></div>
+    </div>
+
+    <div id="cow-screen">
+        <div class="amanda-bg-blur pomboca-global-bg" style="background-image: url('https://drive.google.com/thumbnail?id=1zuZ9N6qHAZJFXG2CbG5cUpRqo7VIjsBV&sz=w1920');"></div>
+        <div class="amanda-bg-contain pomboca-global-bg" style="background-image: url('https://drive.google.com/thumbnail?id=1zuZ9N6qHAZJFXG2CbG5cUpRqo7VIjsBV&sz=w1920');"></div>
+        <div class="amanda-vignette"></div>
+        <div class="cow-content">
+            <div class="cow-text">Aguardando a Amanda<br>tirar leite...</div>
+            <div class="milk-drops">🥛</div>
+        </div>
+    </div>
+
+    <div id="main-ui">
+        
+        <div id="modal-terror" class="modal-overlay">
+            <div class="modal-box" id="terror-box">
+                <div class="modal-icon" id="terror-icon">🔞</div>
+                <h2 class="modal-title" id="terror-title">ACESSO RESTRITO</h2>
+                <p class="modal-text" id="terror-desc">Conteúdo bloqueado. Digite a senha para liberar.</p>
+                <input type="password" id="terror-pwd" class="password-input" maxlength="4" placeholder="****">
+                <button class="btn-modal" onclick="App.checkPassword()">Destrancar</button>
+                <button class="btn-modal" style="background:transparent; color:#ccc; font-size:12px;" onclick="Modal.close('modal-terror')">Desistir</button>
+            </div>
+        </div>
+
+        <div id="modal-alert" class="modal-overlay">
+            <div class="modal-box">
+                <div class="modal-icon" id="alert-icon">⚠️</div>
+                <h2 class="modal-title" id="alert-title">Aviso</h2>
+                <p class="modal-text" id="alert-text">Mensagem...</p>
+                <button class="btn-modal" id="btn-alert-ok" onclick="Modal.close('modal-alert')">OK</button>
+            </div>
+        </div>
+
+        <div id="modal-easter-egg" class="modal-overlay">
+            <div class="modal-box">
+                <div class="modal-icon">🧼</div>
+                <h2 class="modal-title">MODO HIGIENE ATIVADO</h2>
+                <p class="modal-text" style="text-align:left;">Objetivos do dia:<br><br>[ ] Tomar banho<br>[ ] Abrir a janela<br>[ ] Levantar do sofá<br>[ ] Usar desodorante</p>
+                <button class="btn-modal" onclick="Modal.close('modal-easter-egg')">Prometo que vou tentar</button>
+            </div>
+        </div>
+
+        <div id="series-modal" class="modal-overlay">
+            <div class="modal-box" style="max-width: 800px; width: 95%;">
+                <div class="modal-icon">📺</div>
+                <h2 class="modal-title" id="series-modal-title" style="font-size: 28px;">Nome da Série</h2>
+                <div id="series-modal-content" style="margin-top: 20px;"></div>
+                <button class="btn-modal" style="background: transparent; border: 1px solid var(--glass-border); color: #ccc;" onclick="Modal.close('series-modal')">Voltar ao Catálogo</button>
+            </div>
+        </div>
+
+        <div id="camera-modal" class="modal-overlay">
+            <div class="modal-box" style="width: 90%; max-width: 500px;">
+                <h2 class="modal-title">ATUALIZAR POMBOCA</h2>
+                <p class="modal-text" style="font-size: 13px;">O sistema bloqueia fotos da galeria. A IA fará leitura facial ao vivo para impedir fraudes de banho.</p>
+                
+                <div id="video-container">
+                    <video id="camera-stream" autoplay playsinline></video>
+                    <div id="scanner-line" class="scanner-line"></div>
+                </div>
+                <canvas id="camera-canvas" style="display:none;"></canvas>
+                
+                <div id="ai-log" class="ai-log"></div>
+                
+                <button id="btn-take-photo" class="btn-modal" onclick="App.takePhoto()">Tirar Foto e Analisar</button>
+                <button class="btn-modal" style="background:transparent; color:#ccc; font-size:12px;" onclick="App.closeCamera()">Cancelar</button>
+            </div>
+        </div>
+
+        <header id="header">
+            <div class="header-left">
+                <div class="brand" onclick="App.triggerEasterEgg()">
+                    <div class="profile-container">
+                        <img src="https://drive.google.com/thumbnail?id=1UYxPHNg3Sj8BmS5wiEQsRe_IRrem7vmZ&sz=w200" alt="Logo" class="pomboca-global-img">
+                    </div>
+                    <span>POMBOCA<span class="highlight">FLIX</span></span>
+                </div>
+                <nav class="nav-links">
+                    <a onclick="window.scrollTo(0,0)">Início</a>
+                    <a onclick="document.getElementById('catalog-content').scrollIntoView()">Catálogo</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="search-box">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 2a8 8 0 015.29 14.71l5 5a1 1 0 01-1.42 1.42l-5-5A8 8 0 1110 2zm0 2a6 6 0 100 12A6 6 0 0010 4z"/></svg>
+                    <input type="text" id="searchInput" placeholder="Buscar filmes..." oninput="App.search(this.value)">
+                </div>
+                <div class="profile-container" title="Perfil da Amanda" style="width: 50px; height: 50px;">
+                    <img src="https://drive.google.com/thumbnail?id=1UYxPHNg3Sj8BmS5wiEQsRe_IRrem7vmZ&sz=w400" alt="Perfil Amanda" class="pomboca-global-img">
+                </div>
+            </div>
+        </header>
+
+        <section id="hero">
+            <div class="hero-bg" id="hero-bg"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <div class="hero-badge">Recomendação do Algoritmo Suspeito</div>
+                <h1 class="hero-title" id="hero-title">Aguarde...</h1>
+                <div class="hero-meta" id="hero-meta">Buscando</div>
+                <button class="btn-primary" id="hero-play">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24" style="margin-right:5px;"><path d="M8 5v14l11-7z"/></svg>
+                    Assistir Agora
+                </button>
+            </div>
+        </section>
+
+        <section id="hall-of-shame">
+            <div class="shame-container">
+                <img src="https://drive.google.com/thumbnail?id=1UYxPHNg3Sj8BmS5wiEQsRe_IRrem7vmZ&sz=w600" class="shame-photo pomboca-global-img" alt="Pomboca do Dia">
+                <div class="shame-text">
+                    <h2>Pomboca em Destaque</h2>
+                    <p id="shame-joke-display">"Análise da Imagem: Blusa preta, short azul, sentada no balanço do deck com o mato atrás... O scanner facial detectou 99,9% de semelhança com a Suelen e a Marieli! E ainda diz que acha o pessoal da roça feio..."</p>
+                    <button class="btn-camera" onclick="App.openCamera()">📸 Atualizar Foto (Scanner Facial)</button>
+                </div>
+            </div>
+        </section>
+
+        <main id="catalog-content"></main>
+
+        <footer>
+            <div class="footer-logo">POMBOCA<span>FLIX</span> © 2026</div>
+            <div class="footer-text">Plataforma de streaming totalmente desnecessária.</div>
+            <div class="footer-author">Desenvolvido por Jhonantan Cardoso Gonçalves</div>
+        </footer>
+
+        <div id="player-overlay">
+            <div class="imax-glow"></div>
+            <div class="player-header">
+                <div class="player-title" id="player-title">Filme</div>
+                <div class="header-actions">
+                    <button class="btn-report" onclick="App.reportBrokenMovie()">⚠️ Marcar Erro</button>
+                    <button class="btn-close" onclick="App.closePlayer()">✕</button>
+                </div>
+            </div>
+            <div class="player-container" id="player-container"></div>
+        </div>
+    </div> <script>
+        // Transforma o site em PWA automaticamente
+        const manifest = {
+            name: "PomboCaFlix Ultra Max",
+            short_name: "PombocaFlix",
+            start_url: ".",
+            display: "standalone",
+            background_color: "#03030a",
+            theme_color: "#e50914",
+            icons: [{src: "https://cdn-icons-png.flaticon.com/512/3208/3208500.png", sizes: "512x512", type: "image/png"}]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        document.querySelector('head').insertAdjacentHTML('beforeend', `<link rel="manifest" href="${URL.createObjectURL(manifestBlob)}">`);
+    </script>
+
+    <script>
+        const WEB_APP_URL = "URL_DO_SEU_APPS_SCRIPT_AQUI"; 
+        const TMDB_KEY = '15d2ea6d0dc1d476efbca3eba2b9bbfb';
+
+        // LISTA DE FILMES COM CONTEÚDO ADULTO/IMPRÓPRIO QUE EXIGE SENHA
+        const adultMovies = ["Cinquenta Tons Mais Escuros", "O Lobo de Wall Street", "Pulp Fiction", "Deadpool", "Tropa de Elite", "Cidade de Deus", "American Pie", "365 Dias"];
+
+        const jokeIntros = ["Pomboca,", "Atenção Pomboca!", "Alerta vermelho:", "Misericórdia Pomboca,", "Aí Pomboca,", "Notícia urgente:", "Pelo amor de Deus Pomboca,", "Cuidado galera,"];
+        const jokeObs = ["seu sovaco tá vencido,", "tu não toma banho desde 2019,", "esse seu cabelo tá criando vida própria,", "você comeu e deixou a blusa parecendo um lixão,", "o cheiro aí tá pior que esgoto a céu aberto,", "tem uma nuvem de poeira te seguindo,", "sua toalha de banho tá pedindo socorro,", "você soltou um pum que derreteu a pintura da parede,"];
+        const jokePunchlines = ["vai pro chuveiro agora!", "até o Wi-Fi caiu com esse fedor.", "a Vigilância Sanitária já tá a caminho.", "passa um sabonete, prometo que não morde!", "tá espantando até os mosquitos.", "a água do chuveiro mandou lembranças.", "o IBAMA vai isolar a área.", "a poluição visual e olfativa tá gritante!"];
+        
+        const photoJokes = [
+            "Foto ao vivo processada. A lente da câmera quase trincou de susto, mas sobreviveu.",
+            "Biometria facial ao vivo concluída. O sistema confirma: o nível de 'Pomboca' continua altíssimo.",
+            "Você pode tentar trocar a foto na hora, mas a IA sempre vai reconhecer quem foge do banho.",
+            "Análise ao vivo: 0% de banho tomado, 100% de chance de ser a mesma Pomboca de sempre.",
+            "Captura direta da câmera realizada com sucesso. O cheiro de sofá infelizmente foi digitalizado junto."
+        ];
+
+        function getPombocaJoke(isNewPhoto = false) {
+            if(isNewPhoto) return photoJokes[Math.floor(Math.random()*photoJokes.length)];
+            return `${jokeIntros[Math.floor(Math.random()*jokeIntros.length)]} ${jokeObs[Math.floor(Math.random()*jokeObs.length)]} ${jokePunchlines[Math.floor(Math.random()*jokePunchlines.length)]}`;
+        }
+
+        const dbString = "Comédia|20 Anos Mais Jovem|1usyWLbKXBYY0gikoA4TC11lynajts3Ry,Ação|A Rede|1YGLFZ2MkMukl_dMsWIN950xz3CRmYMA,Drama|Um Homem de Sorte|1CCvCdacWLjrlalHTs5qRz7eEwrDfYTE,Drama|A Beira do Caminho|1gqMDXhJnZx1wVDEviNlqueBAHjuqMxqj,Romance|A Casa do Lago|1hJN-PAvzbj7jWdvf0c3Ja_ykD9qXMio,Comédia|A Família Buscapé|1ZpWi7tTkJmhYP6ylgGVMozpNh56z2GYq,Fantasia|A Fantástica Fábrica De Chocolate|1-Ir_0WWKg9W2zpDKPpCiWn9dkOEz02o,Romance|A Fera|108beBAKHS7_J-FpeZ3fcg-AcbDXIE4ZO,Romance|A Força do Destino|1-TGPUTsqdoHzI0LtvhA5oNuVNjOt-2E,Fantasia|A História Sem Fim|1Y6nhg2l_8XBVNevXO5llbaqAPTKrW1Q,Terror|A Rainha dos Condenados|16SgeiqYe4ZRF6uez3U6NT8TyBaTTSQk,Comédia|As Bem Armadas|1UpX8sPIOJP0BfJDb8gUYFjc_t-e8WIM,Drama|As Vantagens de Ser Invisivel|1iMdxa5bqwpiUKSXNnZk2zd5ByKaC550,Super-Heróis|Batman vs Superman|1emqon3NyCN2YhmDzHYuQsCdpsX6zfoA,Família|Beethoven O Magnífico|1DQ895f7kzN1D0vFR-08SoiuNP4QuBjo,Romance|Camille Um Amor do Outro Mundo|1gVtN88LtTX4JTvd9nfYP4uiFUnbFtXM,Romance|Caminhando nas Nuvens|17Y2yvqTUUtZvlLwkksf6h_zUhalrkNw,Musical|Cantando na Chuva|1QSqGoXKTP35TMLJhgAFhoCeD6M6GaAXD,Romance|Casablanca|13U3r4DarJSi8yJhad2e_VrLrX_5a1WA,Ficção Científica|Corpo Fechado|1tW4objBtikjxXPKCmNjw-J4-dHwiBkc,Ação|De Volta Para o Presente|1hgTZ3OLC_E4aUz-g-KfYqr0nUYp96PY,Família|Dennis o Pimentinha|1RVYSAVSHahJTpsCCsTelLtTt1ETBsDI,Fantasia|Descendentes 2|1tQAGn79j4TJFMG5dEmZqJVIDgeBCB-s,Fantasia|Descendentes|108MNNGE6ZINxpoyJTOY_CS004c8RrR8,Musical|Dirty Dancing|1dry7pVgpHUx15KbngUY9R9gEd9YH7Ow,Musical|Dirty Dancing 2|16x2cpjNBjV9g_j0v1LzUxpY57B42fio,Romance|Diário de Uma Paixão|163deNAPPEncSxTAVgA5rDKX_AYj-Yc0,Ação|Django Atira Primeiro|1ADYHKFQaCSL6YNPT0985hw2KqDFCIOA,Comédia|Do Que as Mulheres Gostam|148MD9Xh79qojTEwcf_gPpwE3ni2xNh0,Romance|E Se Fosse Verdade|1pmlinehhMymr7312_vhWDPNH5-9nwX4,Romance|E o Vento Levou|1gR47GplZwN3eFMOdouvYMZMW5-j0spo,Fantasia|Edward Maos de Tesoura|1aGobvuf4ccQu_T1BcmTYAxnzifc1l3U,Fantasia|Encantada|18eRTg3A17SGnQYTJqKKxVxVjylXKlcc,Romance|Enquanto Você Dormia|1TnU99DA3QjOPb-a6MbU,Comédia|Especialista em Crise|1gXhvB_rJufCXJk6-03Yqt27R6sIGTQE,Comédia|Esqueceram De Mim 2|1kvOcIUgefwWjK-Q_181v6SPP0_inVDM,Comédia|Esqueceram de Mim 1|1AAzBFr-8Egjgt9WgdXXYtowVkVwt6P8,Comédia|Esqueceram de Mim 3|1mJhigk9LBDklajPIN5Yv71QQGpoKMSg,Ficção Científica|Eu Sou a Lenda|1vOXTb7WhV2Re2uyLfVbp6dxi_Lmi2D4,Comédia|Feitiço do Tempo|13C98VRk5HA7uWon0_1R6LF1R26WszVhm,Musical|Grease 2|1Jjf_0Nf9sKJ_JexmOgqCGyAAYKxnrHM,Super-Heróis|Guardiões da Galáxia|1Qw7S8X8gnOmvpZbJNGo9CTDOEJ7GZXU,Super-Heróis|Guardiões da Galáxia Vol 2|1a4CYf3wuaiuLTf9IP-11SZwrSlmhx2U,Romance|Harry e Sally|1YrZuCSyGlQ7ne7JXEax3xqnTo4UdWI4,Ficção Científica|Jogador N1|1Cqx1ngiOycBbFzTfm7iYYpg65adl1lc,Ação|King Kong|1faftttxava4Q9gkMw7FYc4sqfgOiYkQ,Musical|La Bamba|16qFdk3wKkt5PSq9b8yHNFrNzg82G970,Ação|Mad Max Estrada da Furia|1oS3elf4XOMaggQXkkojKb_3OzPolsUc,Drama|Meu Pé de Laranja Lima|1UmWtHIXQA_dsu4pS1pBHxCUdGdcYigg,Comédia|Miss Simpatia 2|1JixedaEwDebNtJMRrzBOW6hLc-it6t8w,Comédia|Miss Simpatia 1|1CCIgi5QLINKWQUxwcaNb8v504xaCS-E,Drama|Noe|11-YgzfZDnsV-EKd6DGvp2EH2h6XdLlk,Drama|O Ebrio|1NkxYnTi0bF2oi_7kRqseGzKGYtH5FZo,Ficção Científica|O Planeta dos Macacos|1mCBT3IVLOcgmdcQasPuJzJfbN71X9h0,Drama|O Terminal|12wTVudkUETWCKNJ7B4xdE_1GVjvtqWw3,Ficção Científica|Planeta Dos Macacos A Origem|1raxdyV9UCHuUnmpcdR7G-kptXGN9tvs,Ficção Científica|Planeta dos Macacos A Guerra|1UP_9X4xJ9e0SPuhp2bF3tSYa5Gixkpw,Comédia|Querida Encolhi as Crianças|18hjY2gZkN7V89YASTLHJEXRKd7tbvaM,Comédia|Querida Estiquei o Bebê|19Rr1YoDDbDzBFnFK1R5WW_nXIB5SEAw,Romance|Querido John|1zWMlxuuMp5InReJXVS5aKXQyjrGisxY,Romance|Romeu e Julieta|1XZCIITKypXyE4Q6QHTY_UhX4YUVu4rA,Ação|Roberto Carlos a 300 Quilômetros|1RDgkPCPUGfBgc2ENk_EllcSonAkH_og,Ação|Roberto Carlos em Ritmo de Aventura|1Gtoja-DmtXqM6RUWrHjyzJDIAkPqji4,Romance|Sabrina|121lEgOqbLY6_XUPLJZE1wwRqKaoZxbU,Família|Sabrina Vai à Austrália|1cz9_yBG0mBHIN52fOnQ9S1_uNPJKBbA,Comédia|Se Eu Fosse Minha Mãe|1vTLmTT6vmSlf-9nagZJPqIGTH6uy-eg,Comédia|Se Eu Fosse Você 2|1V3SVn8xhl_LQR5T_anbkHc47NY543Q8,Comédia|Sexta-Feira Muito Louca|1Ggy1DooAytfsie_-CE6-Idn2pkGstnc,Ação|Soldado Universal|18NrBZ0rOCsyHKTOdzLP9FjK82GTaJs4,Ficção Científica|Starman|17pku0cu1tlesfAEoCulfDmhazN4GCDk,Super-Heróis|Thor Ragnarok|1aP3lv5l3EzOgg5wSSwdXlv0D7qUBB0g,Drama|Tim Maia|1yIR6S-_G6Lxzc9fAQu-6V34XRLrVSFg,Comédia|Todo Poderoso|1l0PvP5c4_W05-4N1sat7ENKILwWHml8,Ficção Científica|Tomorrowland|1GQ8MlvraTVjmHdcsvgl6klw2h5uGYkY,Romance|Um Amor Para Recordar|1BAL62K390PyMoaWzfTn-jawVw25Rek4,Romance|Um Porto Seguro|1tHCmN2qQVeQg_va5OWuoNJovJ7NDHwo,Fantasia|Uma Garota Encantada|12T08gDA-VwFU4EcQ2KsfanE2wGC3YYw,Ação|Velocidade Máxima|18Wa16hqnMrKvx4VOy3Yow6ZK2SsTylk,Comédia|Viagem Insólita|1rJpdKRdtL_7hqR2XV_nr5HTTiL99D_Q,Super-Heróis|Vingadores Era de Ultron|1KYWeJSW8z1i4PCBV-a2y2gvapUpibJE,Faroeste|Viva Django|1cRifVn0X_KHSzXeDx2FQKay2LIWvJUY,Série: Game of Thrones|T03 - E02|1Kj0qcweGp20CzyOxymbmzoFwrwFuN8Q,Série: Game of Thrones|T03 - E03|1cQlpxwdOjlu1q6Rk5oApoU-KPANOd-4,Série: Game of Thrones|T03 - E04|1TNxDTbrMYQwSemZQ0bzf1BjY0GapL4A,Série: Game of Thrones|T03 - E05|1c1vsp0kGGS1KUdXWja6ANSgFmW6Wa5Y,Série: Game of Thrones|T03 - E06|1ovNy0hgNpqdl321EueqmSZF57jwePho,Série: Game of Thrones|T03 - E07|1JWdmG8ksNsvHiMWB187CKOBZITS3ml4,Série: Game of Thrones|T03 - E08|1H7mnk-CqseqxRuZL4fj5K3S9KfbeD1g,Série: Game of Thrones|T03 - E09|1XJDIgDx5E-gdLB20TSk5lOGxWYT5-nE,Série: Game of Thrones|T03 - E10|1jViWIZafumQMRX7TCx6cBSlvEYGRD2g,Série: Game of Thrones|T06 - E05|1gB4bWI5lfXWUbtn_KChC3nyZOxinRFQ,Série: La Casa De Papel|T02 - E01|1aPKEODA7sR6nQQNgDMDV7QlkN6WcfTQ,Série: La Casa De Papel|T02 - E02|1meLjeiEPfUb4x3qOmuDu-iklofvEBww,Série: La Casa De Papel|T02 - E03|1ljF81tB1P_jvemX_JLaGtnVzWWK6MOM,Série: La Casa De Papel|T02 - E04|1tzrubPxauUcgMKJlAae6vpkDHwp7yD0,Série: La Casa De Papel|T02 - E05|1LK7rrQjZmd_MWOO7iQO-gYCDMfNrJnE,Série: La Casa De Papel|T02 - E06|1QnzdmHb18Lxl5bjjlLOsb7iY3Wdx9IU,Série: The Good Doctor|T02 - E01|1zA-NZkzNRryYfZVF-zpQ2MFnAo3pRd8,Série: The Good Doctor|T02 - E02|1-Bmv57FEdzP8FRGDtjk_ajRpLEjvzCM,Série: The Good Doctor|T02 - E03|1TB0ZeUrP8KepKaZGEllufvsk6LPNkul,Série: The Good Doctor|T02 - E04|1rsiT-v679flpjPZ8mJT-DEJivaZyLJY,Série: The Good Doctor|T02 - E05|1dZvFfkLE-9REDdhdal1TW1pAA6PDnFI,Série: The Good Doctor|T02 - E07|1nSdl7P7NiPKxlw-PUMx5Ru3BvgrRmqg,Série: The Good Doctor|T02 - E08|1Xs7Qf578up0rvX7iy5glflhcYzQP7Qo,Série: The Good Doctor|T02 - E09|1jkgeMF0ENxkJ1AxCWvS1zJrnnFcmbHE,Série: The Good Doctor|T02 - E10|1nzg350Z-r05AecdaDho-EKOHjtYzFcg,Série: The Good Doctor|T02 - E11|1y_hZDR6pAJjNesHqNgOJKCYATw0dHZU,Série: The Good Doctor|T02 - E12|1dCRt1M-ArPRshIqQdM9Qf34-v_HXVxE,Série: The Good Doctor|T02 - E13|1twjEEaj-WAHXmk4dIRTbgYGHkUch8BQ,Série: The Good Doctor|T02 - E14|107fznbUEoGtUwl9WPjMlihfi5tZDzUQ,Série: The Good Doctor|T02 - E15|1mo9ASuGeg6HoQ5wu8vH_J13rHYzCpew,Série: The Good Doctor|T02 - E16|1GNE6cQ-RmrUS3B9aEWmOLe35KaUEmVs,Série: The Good Doctor|T02 - E17|1IDIKicFiU5MpxgJZIgLBVtK5AANvP7M,Série: The Good Doctor|T02 - E18|1LXvx-cE561YmF13HPq-jqT9R1bi3mg8";
+
+        const Modal = {
+            open: (id) => document.getElementById(id).classList.add('active'),
+            close: (id) => document.getElementById(id).classList.remove('active')
+        };
+
+        const App = {
+            movies: [],
+            seriesData: {},
+            history: JSON.parse(localStorage.getItem('pomboca_history')) || [],
+            terrorAttempts: 0,
+            terrorBlockedUntil: localStorage.getItem('pomboca_block') || 0,
+            currentPlayingId: null,
+            jokesTriggeredToday: parseInt(localStorage.getItem('pomboca_joke_count')) || 0,
+            logoClicks: 0,
+            clickTimer: null,
+            watchTimer: null,
+            cameraStream: null,
+            hasNewPhoto: false,
+            aiReady: false,
+
+            init() {
+                try {
+                    const mapCats = {
+                        "Ação": "💥 Explosões e Porradaria (Ação)",
+                        "Comédia": "😂 Risadas pra não chorar (Comédia)",
+                        "Terror": "👻 Para dormir com a luz acesa (Terror)",
+                        "Drama": "😭 Choro livre no sofá (Drama)",
+                        "Animação": "🎨 Desenhos pra crianças grandinhas (Animação)",
+                        "Ficção Científica": "👽 Viagens no tempo e ETs (Ficção Científica)",
+                        "Super-Heróis": "🦸 Capas, cuecas por cima da calça e CGI (Super-Heróis)",
+                        "Romance": "💕 Iludidos pelo amor (Romance)",
+                        "Brasileiros": "🇧🇷 Padrão BR de Qualidade (Nacionais)",
+                        "Musical": "🎵 Cantoria do nada (Musical)",
+                        "Família": "🛋️ Pra assistir com a vó (Família)",
+                        "Faroeste": "🤠 Poeira, cavalos e tiros (Faroeste)"
+                    };
+
+                    const parsedList = dbString.split(',').map(item => item.split('|'));
+                    
+                    parsedList.filter(item => item[2] && item[2] !== 'SEM_LINK_VALIDO').forEach((item) => {
+                        let originalCat = item[0];
+                        let title = item[1];
+                        let driveId = item[2]; 
+
+                        if(originalCat.includes('Série')) {
+                            let sName = originalCat.replace('Série: ', '').trim();
+                            if(!this.seriesData[sName]) this.seriesData[sName] = {};
+                            
+                            let parts = title.split('-');
+                            let season = parts[0] ? parts[0].trim() : "T01";
+                            let ep = parts[1] ? parts[1].trim() : title;
+                            
+                            if(!this.seriesData[sName][season]) this.seriesData[sName][season] = [];
+                            this.seriesData[sName][season].push({epName: ep, id: driveId, originalTitle: title});
+                        } else {
+                            this.movies.push({
+                                id: driveId,
+                                category: mapCats[originalCat] || originalCat,
+                                originalCategory: originalCat,
+                                title: title,
+                                driveUrl: `https://drive.google.com/file/d/${driveId}/preview`
+                            });
+                        }
+                    });
+
+                    const savedPhoto = localStorage.getItem('pomboca_custom_photo');
+                    if (savedPhoto) {
+                        this.updateGlobalPhoto(savedPhoto);
+                        this.hasNewPhoto = true;
+                        const shameDisplay = document.getElementById('shame-joke-display');
+                        if(shameDisplay) shameDisplay.innerText = "Essa foto nova aí não engana ninguém. O cheiro de sofá continua forte, a IA já até sabe quem é.";
+                    }
+
+                    this.startLoadingSequence();
+                    
+                } catch(e) { console.error("Erro no processamento:", e); }
+            },
+
+            startLoadingSequence() {
+                const msgEl = document.getElementById('loading-msg');
+                setTimeout(() => { if(msgEl) msgEl.innerText = "VERIFICANDO CÓDIGO FONTE E CONEXÃO..."; }, 1500);
+                setTimeout(() => { if(msgEl) msgEl.innerText = "CALCULANDO NÍVEL DE SUJEIRA DO AMBIENTE..."; }, 4000);
+                setTimeout(() => { if(msgEl) msgEl.innerText = "ANÁLISE CONCLUÍDA. PODE ENTRAR."; }, 7500);
+                
+                setTimeout(() => {
+                    const loadingScreen = document.getElementById('loading-screen');
+                    if(loadingScreen) loadingScreen.style.opacity = '0';
+                    setTimeout(() => { 
+                        if(loadingScreen) loadingScreen.style.display = 'none'; 
+                        this.renderHeroInit(); 
+                        this.renderCatalog();
+                        Modal.open('login-screen'); 
+                    }, 800);
+                }, 9000);
+            },
+
+            finishLogin() {
+                Modal.close('login-screen');
+                
+                // Pede permissão da câmera silenciosamente na primeira vez
+                if(!localStorage.getItem('pomboca_camera_asked')) {
+                    navigator.mediaDevices.getUserMedia({video: true}).then(stream => {
+                        stream.getTracks().forEach(t=>t.stop());
+                        localStorage.setItem('pomboca_camera_asked', 'true');
+                    }).catch(e => {
+                        localStorage.setItem('pomboca_camera_asked', 'true');
+                    });
+                }
+                
+                this.playIntro();
+                this.startTimers();
+            },
+
+            playIntro() {
+                const intro = document.getElementById('intro-screen');
+                const snd = document.getElementById('snd-intro');
+                intro.classList.add('active');
+                
+                setTimeout(() => {
+                    if(snd) snd.play().catch(e=>{});
+                    intro.classList.add('play');
+                }, 500);
+
+                setTimeout(() => {
+                    intro.classList.remove('active', 'play');
+                    document.getElementById('main-ui').classList.add('visible');
+                    this.checkDailyJoke();
+                }, 4000);
+            },
+
+            // INSPEÇÃO DE ROTINA TIMER (8h às 18h, primeira 2 mins, resto 30 mins)
+            startTimers() {
+                setTimeout(() => {
+                    this.triggerRoutineInspection();
+                    setInterval(() => {
+                        this.triggerRoutineInspection();
+                    }, 30 * 60000); // A cada 30 min
+                }, 2 * 60000); // 2 Minutos primeira vez
+            },
+
+            triggerRoutineInspection() {
+                const hour = new Date().getHours();
+                if(hour >= 8 && hour < 18) {
+                    const tasks = ["🍽️ Já lavou a louça, abençoado(a)?", "🗑️ O lixo já foi pra rua hoje?", "👕 Já dobrou aquelas roupas que estão na cadeira?", "🧹 Já varreu a casa ou tá criando novos pets na poeira?"];
+                    const task = tasks[Math.floor(Math.random() * tasks.length)];
+                    document.getElementById('task-icon').innerText = task.split(' ')[0];
+                    document.getElementById('task-text').innerText = task.substring(3);
+                    Modal.open('modal-tasks');
+                }
+            },
+
+            acceptTasks() { Modal.close('modal-tasks'); },
+
+            checkDailyJoke() {
+                const today = new Date().toLocaleDateString('pt-BR');
+                const lastDate = localStorage.getItem('pomboca_joke_date');
+                if (lastDate !== today) {
+                    this.jokesTriggeredToday = 0;
+                    localStorage.setItem('pomboca_joke_date', today);
+                }
+                if(this.jokesTriggeredToday < 10) {
+                    this.showToast(getPombocaJoke(this.hasNewPhoto));
+                    this.jokesTriggeredToday++;
+                    localStorage.setItem('pomboca_joke_count', this.jokesTriggeredToday);
+                }
+            },
+
+            showToast(msg) {
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = `<strong>🦨 ALERTA:</strong><br>${msg}`;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => { toast.classList.add('show'); }, 100);
+                setTimeout(() => { toast.classList.remove('show'); setTimeout(()=>toast.remove(), 500); }, 10000); // 10 Segundos
+            },
+
+            // CÂMERA E IA REAL COM FACE-API
+            async openCamera() {
+                Modal.open('camera-modal');
+                document.getElementById('ai-log').style.display = 'block';
+                document.getElementById('ai-log').innerHTML = '<span>> INICIANDO CÂMERA...</span>';
+                document.getElementById('btn-take-photo').style.display = 'none'; 
+                document.getElementById('video-container').classList.remove('scanning');
+
+                try {
+                    this.cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                    document.getElementById('camera-stream').srcObject = this.cameraStream;
+
+                    if(!this.aiReady) {
+                        document.getElementById('ai-log').innerHTML += '<br><span style="color: #ff0;">> BAIXANDO REDE NEURAL BIOMÉTRICA... (Aguarde)</span>';
+                        await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/');
+                        this.aiReady = true;
+                    }
+                    
+                    document.getElementById('ai-log').innerHTML += '<br><span>> IA PRONTA. AGUARDANDO CAPTURA FACIAL.</span>';
+                    document.getElementById('btn-take-photo').style.display = 'block'; 
+
+                } catch(e) {
+                    alert("Erro ao acessar a câmera. Dê permissão no navegador.");
+                    this.closeCamera();
+                }
+            },
+
+            closeCamera() {
+                Modal.close('camera-modal');
+                if(this.cameraStream) {
+                    this.cameraStream.getTracks().forEach(track => track.stop());
+                    this.cameraStream = null;
+                }
+            },
+
+            async takePhoto() {
+                const video = document.getElementById('camera-stream');
+                const canvas = document.getElementById('camera-canvas');
+                const logBox = document.getElementById('ai-log');
+                
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                const base64Photo = canvas.toDataURL('image/jpeg');
+
+                document.getElementById('video-container').classList.add('scanning');
+                document.getElementById('btn-take-photo').style.display = 'none';
+                logBox.innerHTML = '<span>> ANALISANDO PIXELS E BUSCANDO ROSTO...</span>';
+
+                // A MÁGICA: DETECÇÃO FACIAL REAL
+                const detections = await faceapi.detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions());
+
+                if (detections.length === 0) {
+                    setTimeout(() => {
+                        document.getElementById('video-container').classList.remove('scanning');
+                        logBox.innerHTML += '<br><span style="color: #ff4d4d;">> ❌ ERRO CRÍTICO: NENHUM ROSTO DETECTADO!</span>';
+                        logBox.innerHTML += '<br><span style="color: #ff4d4d;">> Tentativa de fraude detectada. Aponte para um rosto humano!</span>';
+                        document.getElementById('btn-take-photo').style.display = 'block';
+                    }, 1000);
+                    return; 
+                }
+
+                logBox.innerHTML += '<br><span>> ROSTO HUMANO DETECTADO COM SUCESSO.</span>';
+                logBox.innerHTML += '<br><span>> COMPARANDO COM PADRÃO DE SUJEIRA...</span>';
+                logBox.innerHTML += '<br><span style="color: #0f0;">> MÓDULO DE RECONHECIMENTO APROVADO.</span>';
+
+                setTimeout(() => {
+                    document.getElementById('video-container').classList.remove('scanning');
+                    this.updateGlobalPhoto(base64Photo);
+                    localStorage.setItem('pomboca_custom_photo', base64Photo);
+                    this.hasNewPhoto = true;
+                    this.sendPhotoToDrive(base64Photo);
+                    this.closeCamera();
+                    
+                    const shameDisplay = document.getElementById('shame-joke-display');
+                    if(shameDisplay) shameDisplay.innerText = "Identidade confirmada ao vivo. A inteligência artificial encontrou o rosto e confirmou que a cara de Pomboca não sai nem mudando a foto.";
+                    this.showToast("Nova foto registrada com sucesso no sistema de biometria Pomboca.");
+                }, 2000);
+            },
+
+            updateGlobalPhoto(src) {
+                const imgs = document.querySelectorAll('.pomboca-global-img');
+                imgs.forEach(img => img.src = src);
+                const bgs = document.querySelectorAll('.pomboca-global-bg');
+                bgs.forEach(bg => bg.style.backgroundImage = `url('${src}')`);
+            },
+
+            sendPhotoToDrive(base64) {
+                if (WEB_APP_URL !== "URL_DO_SEU_APPS_SCRIPT_AQUI") {
+                    fetch(WEB_APP_URL, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tipo: "foto", imagem: base64, dataHora: new Date().toLocaleString('pt-BR') })
+                    }).catch(e => console.log("Erro ao enviar foto."));
+                }
+            },
+
+            triggerEasterEgg() {
+                this.logoClicks++;
+                clearTimeout(this.clickTimer);
+                if(this.logoClicks >= 10) {
+                    this.logoClicks = 0;
+                    Modal.open('modal-easter-egg');
+                } else {
+                    this.clickTimer = setTimeout(() => { this.logoClicks = 0; }, 2000);
+                }
+            },
+
+            getFunnyRating(title) {
+                const types = [
+                    { icon: '💨', text: 'peidos de avaliação' },
+                    { icon: '🚿', text: 'banhos necessários' },
+                    { icon: '🛋️', text: 'níveis de preguiça' }
+                ];
+                let hash = 0;
+                for (let i = 0; i < title.length; i++) hash += title.charCodeAt(i);
+                const score = (hash % 5) + 1; 
+                const selected = types[hash % 3];
+                return `${selected.icon.repeat(score)} <br><span style="font-size:10px; color:#aaa;">${score} ${selected.text}</span>`;
+            },
+
+            async renderHeroInit() {
+                if(this.movies.length === 0) return;
+                const hero = this.movies[Math.floor(Math.random() * this.movies.length)];
+                document.getElementById('hero-title').innerText = hero.title;
+                document.getElementById('hero-meta').innerText = `${hero.category}`;
+                document.getElementById('hero-play').onclick = () => this.requestPlay(hero.id, hero.title, hero.originalCategory);
+                
+                try {
+                    let cleanTitle = hero.title.replace(/\b(19|20)\d{2}\b/g, '').trim();
+                    const res = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`);
+                    const data = await res.json();
+                    if(data.results && data.results.length > 0 && data.results[0].backdrop_path) {
+                        document.getElementById('hero-bg').style.backgroundImage = `url('https://image.tmdb.org/t/p/original${data.results[0].backdrop_path}')`;
+                        document.getElementById('hero-meta').innerText = `${data.results[0].release_date ? data.results[0].release_date.substring(0,4) : ''} • ${hero.category}`;
+                    }
+                } catch(e){}
+            },
+
+            renderCatalog(dataset = this.movies) {
+                const main = document.getElementById('catalog-content');
+                main.innerHTML = '';
+
+                // SÉRIES AGRUPADAS
+                if(Object.keys(this.seriesData).length > 0) {
+                    let seriesCards = Object.keys(this.seriesData).map(sName => {
+                        let firstId = Object.values(this.seriesData[sName])[0][0].id;
+                        return `
+                        <div class="card-wrapper" onclick="App.openSeriesModal('${sName}')">
+                            <div class="card lazy-card" data-id="${firstId}" data-title="${sName}">
+                                <div class="css-placeholder">${sName}</div>
+                                <img class="card-img" alt="${sName}">
+                                <div class="card-ui">
+                                    <div class="card-title">${sName}</div>
+                                    <button class="btn-play">▶ Ver Temporadas</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    main.innerHTML += `<section class="row"><h2 class="row-title">📺 Maratonas (Séries)</h2><div class="carousel">${seriesCards}</div></section>`;
+                }
+
+                // FILMES
+                const categories = [...new Set(dataset.map(m => m.category))];
+                categories.forEach(cat => {
+                    const catMovies = dataset.filter(m => m.category === cat);
+                    if(catMovies.length > 0) {
+                        let cards = catMovies.map(m => `
+                            <div class="card-wrapper">
+                                <div class="card lazy-card" data-id="${m.id}" data-title="${m.title.replace(/"/g, '&quot;')}">
+                                    <div class="css-placeholder">${m.title}</div>
+                                    <img class="card-img" alt="${m.title}">
+                                    <div class="card-ui">
+                                        <div class="card-title">${m.title}</div>
+                                        <div class="card-rating">${this.getFunnyRating(m.title)}</div>
+                                        <button class="btn-play" onclick="App.requestPlay('${m.id}', '${m.title.replace(/'/g, "\\'")}', '${m.originalCategory}')">▶ Assistir</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        main.innerHTML += `<section class="row"><h2 class="row-title">${cat}</h2><div class="carousel">${cards}</div></section>`;
+                    }
+                });
+
+                this.initLazyLoading();
+            },
+
+            openSeriesModal(seriesName) {
+                const data = this.seriesData[seriesName];
+                let contentHTML = '';
+                
+                for(let season in data) {
+                    contentHTML += `<div class="season-block">
+                        <div class="season-title">${season}</div>
+                        <div class="episodes-grid">`;
+                    
+                    data[season].forEach(ep => {
+                        contentHTML += `<button class="ep-btn" onclick="App.requestPlay('${ep.id}', '${seriesName} - ${ep.epName}', 'Série')">${ep.epName}</button>`;
+                    });
+                    
+                    contentHTML += `</div></div>`;
+                }
+
+                document.getElementById('series-modal-title').innerText = seriesName;
+                document.getElementById('series-modal-content').innerHTML = contentHTML;
+                Modal.open('series-modal');
+            },
+
+            initLazyLoading() {
+                const observer = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const card = entry.target;
+                            const title = card.getAttribute('data-title');
+                            const driveId = card.getAttribute('data-id');
+                            const imgEl = card.querySelector('.card-img');
+                            
+                            let searchTitle = title.replace(/\b(19|20)\d{2}\b/g, '').trim(); 
+                            fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(searchTitle)}&language=pt-BR`)
+                            .then(res => res.json())
+                            .then(data => {
+                                if(data.results && data.results.length > 0 && data.results[0].poster_path) {
+                                    imgEl.src = 'https://image.tmdb.org/t/p/w500' + data.results[0].poster_path;
+                                } else {
+                                    imgEl.src = `https://drive.google.com/thumbnail?id=${driveId}&sz=w500`;
+                                }
+                            }).catch(() => { imgEl.src = `https://drive.google.com/thumbnail?id=${driveId}&sz=w500`; });
+
+                            imgEl.onload = () => imgEl.classList.add('loaded');
+                            obs.unobserve(card);
+                        }
+                    });
+                }, { rootMargin: "300px" });
+
+                document.querySelectorAll('.lazy-card').forEach(card => observer.observe(card));
+            },
+
+            search(query) {
+                query = query.toLowerCase();
+                if(query === '') {
+                    document.getElementById('hero').style.display = 'flex';
+                    document.getElementById('hall-of-shame').style.display = 'flex';
+                    this.renderCatalog();
+                } else {
+                    document.getElementById('hero').style.display = 'none';
+                    document.getElementById('hall-of-shame').style.display = 'none';
+                    const filtered = this.movies.filter(m => m.title.toLowerCase().includes(query) || m.category.toLowerCase().includes(query));
+                    const main = document.getElementById('catalog-content');
+                    main.innerHTML = '';
+                    this.buildRow(`Resultados para "${query}"`, filtered, main);
+                    this.initLazyLoading(); 
+                }
+            },
+
+            // ============================ 
+            // CLASSIFICAÇÃO INDICATIVA E REPRODUÇÃO
+            // ============================ 
+            requestPlay(id, title, category) {
+                // Fechar modal de series se estiver aberto
+                Modal.close('series-modal');
+
+                // Análise de Nudes/Violência/Terror
+                const isAdult = adultMovies.includes(title);
+                
+                if (category === 'Terror' || isAdult) {
+                    if (Date.now() < this.terrorBlockedUntil) {
+                        const box = document.querySelector('#modal-alert .modal-box');
+                        box.innerHTML = `<div class="modal-icon" id="alert-icon">🚫</div><h2 class="modal-title" id="alert-title">Bloqueio Temporário</h2><p class="modal-text" id="alert-text">Acesso bloqueado por segurança. Tente mais tarde.</p><button class="btn-modal" onclick="Modal.close('modal-alert')">OK</button>`;
+                        Modal.open('modal-alert');
+                        return;
+                    }
+                    
+                    this.targetMovieId = id;
+                    this.targetMovieTitle = title;
+                    document.getElementById('terror-pwd').value = '';
+                    
+                    if(isAdult) {
+                        document.getElementById('terror-icon').innerText = '🔞';
+                        document.getElementById('terror-title').innerText = 'CONTEÚDO IMPRÓPRIO';
+                        document.getElementById('terror-desc').innerText = 'Opa! Safadeza, nudes ou palavrão detectados. O algoritmo bloqueou por precaução. Digite a senha secreta para liberar.';
+                    } else {
+                        document.getElementById('terror-icon').innerText = '👻';
+                        document.getElementById('terror-title').innerText = 'ÁREA ASSUSTADORA';
+                        document.getElementById('terror-desc').innerText = 'Até os fantasmas exigem credenciais. Digite a senha para entrar.';
+                    }
+
+                    Modal.open('modal-terror');
+                } else {
+                    this.startCowAnimation(id, title);
+                }
+            },
+
+            checkPassword() {
+                const pwd = document.getElementById('terror-pwd').value;
+                if (pwd === "4030") {
+                    this.terrorAttempts = 0;
+                    Modal.close('modal-terror');
+                    this.startCowAnimation(this.targetMovieId, this.targetMovieTitle);
+                } else {
+                    this.terrorAttempts++;
+                    const box = document.getElementById('terror-box');
+                    const snd = document.getElementById('snd-terror');
+                    box.classList.add('shake');
+                    if(snd) snd.play().catch(e=>{});
+                    setTimeout(() => box.classList.remove('shake'), 500);
+
+                    if(this.terrorAttempts >= 3) {
+                        Modal.close('modal-terror');
+                        this.terrorBlockedUntil = Date.now() + (5 * 60 * 1000); 
+                        localStorage.setItem('pomboca_block', this.terrorBlockedUntil);
+                        
+                        const alertBox = document.querySelector('#modal-alert .modal-box');
+                        alertBox.innerHTML = `<div class="modal-icon" id="alert-icon">🚫</div><h2 class="modal-title" id="alert-title">Bloqueado</h2><p class="modal-text" id="alert-text">Você errou 3 vezes. Acesso bloqueado por segurança... vá tomar um banho.</p><button class="btn-modal" onclick="Modal.close('modal-alert')">OK</button>`;
+                        Modal.open('modal-alert');
+                    }
+                }
+            },
+
+            startCowAnimation(id, title) {
+                const cow = document.getElementById('cow-screen');
+                cow.classList.add('active');
+                setTimeout(() => {
+                    cow.classList.remove('active');
+                    this.openPlayer(id, title);
+                }, 4000);
+            },
+
+            openPlayer(id, title) {
+                this.currentPlayingId = id;
+                this.currentPlayingTitle = title;
+                
+                document.getElementById('player-title').innerText = title;
+                document.getElementById('player-container').innerHTML = `
+                    <iframe src="https://drive.google.com/file/d/${id}/preview" allow="autoplay; fullscreen" allowfullscreen width="100%" height="100%" frameborder="0"></iframe>
+                `;
+                
+                Modal.open('player-overlay');
+
+                clearTimeout(this.watchTimer);
+                this.watchTimer = setTimeout(() => { this.showStillWatching(); }, 5400000); // 90 Minutos
+            },
+
+            closePlayer() {
+                this.currentPlayingId = null;
+                clearTimeout(this.watchTimer);
+                Modal.close('player-overlay');
+                document.getElementById('player-container').innerHTML = ''; 
+            },
+
+            showStillWatching() {
+                const box = document.querySelector('#modal-alert .modal-box');
+                box.innerHTML = `
+                    <div class="modal-icon">📺</div>
+                    <h2 class="modal-title">VOCÊ AINDA ESTÁ ASSISTINDO?</h2>
+                    <p class="modal-text">Você está assistindo há muito tempo.<br>Talvez seja hora de levantar do sofá e abrir uma janela.</p>
+                    <button class="btn-modal" onclick="Modal.close('modal-alert'); App.resetWatchTimer();" style="margin-bottom:10px;">Continuar</button>
+                    <button class="btn-modal" onclick="Modal.close('modal-alert'); App.closePlayer();" style="background:transparent; color:#ccc;">Ir fazer outra coisa</button>
+                `;
+                Modal.open('modal-alert');
+            },
+
+            resetWatchTimer() {
+                clearTimeout(this.watchTimer);
+                this.watchTimer = setTimeout(() => { this.showStillWatching(); }, 5400000);
+            },
+
+            reportBrokenMovie() {
+                if(!this.currentPlayingId) return;
+                const movieId = this.currentPlayingId;
+                const title = this.currentPlayingTitle;
+
+                if(!confirm(`O filme/episódio "${title}" está com erro e não carrega?\nEle será REMOVIDO do catálogo imediatamente e o erro será enviado à moderação.`)) return;
+
+                this.movies = this.movies.filter(m => m.id !== movieId);
+                this.closePlayer();
+
+                if (WEB_APP_URL !== "URL_DO_SEU_APPS_SCRIPT_AQUI") {
+                    fetch(WEB_APP_URL, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ titulo: title, categoria: "Reportado", link: `https://drive.google.com/file/d/${movieId}/preview`, dataHora: new Date().toLocaleString('pt-BR') })
+                    }).catch(e => console.log(e));
+                }
+
+                const box = document.querySelector('#modal-alert .modal-box');
+                box.innerHTML = `<div class="modal-icon" id="alert-icon">🗑️</div><h2 class="modal-title" id="alert-title">Filme Removido</h2><p class="modal-text" id="alert-text">O filme "${title}" foi marcado com erro e removido da plataforma com sucesso!</p><button class="btn-modal" onclick="Modal.close('modal-alert')">OK</button>`;
+                Modal.open('modal-alert');
+            }
+        };
+
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) header.classList.add('scrolled');
+            else header.classList.remove('scrolled');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
+
+    </script>
+</body>
+</html>
